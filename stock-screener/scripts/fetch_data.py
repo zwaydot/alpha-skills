@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
 """
-Stock Screener - Server-side multi-factor screening via Yahoo Finance.
+Stock Screener v2 - Multi-factor screening with style-adaptive scoring.
 
 Two-phase approach:
-  Phase 1: Server-side filter (sector, PE, ROE, market cap, region) — 1 API call
-  Phase 2: Fetch detailed data only for top candidates — N API calls (N ≈ 25-50)
+  Phase 1: Server-side filter (sector, PE, ROE, market cap, region) - 1 API call
+  Phase 2: Fetch detailed data for top candidates, score with 5 factors - N API calls
+
+Scoring factors: Valuation (PE + EV/EBITDA) | Profitability (ROE) |
+  Growth (revenue + earnings) | Momentum (52-week) | Safety (debt + cash flow)
+
+Style presets adjust factor weights:
+  balanced (default) | value | growth | quality
 
 Usage:
-  python3 fetch_data.py --sector Technology                    # US tech stocks
-  python3 fetch_data.py --sector Technology --industry Semiconductors
-  python3 fetch_data.py --region hk --sector Technology        # HK tech stocks
-  python3 fetch_data.py --tickers AAPL MSFT NVDA               # Custom list
-  python3 fetch_data.py --pe 25 --roe 10 --top 50              # Custom thresholds
-  python3 fetch_data.py --sector Technology --pe 0 --roe 0     # No financial filters
+  python3 fetch_data.py --sector Technology --style growth
+  python3 fetch_data.py --sector "Financial Services" --style value
+  python3 fetch_data.py --tickers AAPL MSFT NVDA --pe 40 --roe 10
+  python3 fetch_data.py --region hk --sector Technology --style quality
 """
 
 import sys
@@ -62,88 +66,173 @@ SECTOR_ALIASES = {
     "media": "Communication Services",
 }
 
+# Style presets: factor weights (must sum to 100)
+STYLE_PRESETS = {
+    "balanced": {"valuation": 25, "profitability": 25, "growth": 20, "momentum": 15, "safety": 15},
+    "value":    {"valuation": 40, "profitability": 20, "growth": 10, "momentum": 10, "safety": 20},
+    "growth":   {"valuation": 10, "profitability": 15, "growth": 40, "momentum": 25, "safety": 10},
+    "quality":  {"valuation": 15, "profitability": 35, "growth": 15, "momentum": 10, "safety": 25},
+}
+
 
 def resolve_sector(user_input):
-    """Resolve user's sector input to a valid Yahoo Finance sector name.
-
-    Returns a valid sector name or None if unresolvable.
-    """
+    """Resolve user's sector input to a valid Yahoo Finance sector name."""
     if not user_input:
         return None
-
-    # Exact match (case-insensitive)
     for s in VALID_SECTORS:
         if user_input.lower() == s.lower():
             return s
-
-    # Partial match (e.g., "Financial" → "Financial Services")
     for s in VALID_SECTORS:
         if user_input.lower() in s.lower() or s.lower() in user_input.lower():
             return s
-
-    # Alias match (e.g., "tech" -> "Technology")
     for alias, sector in SECTOR_ALIASES.items():
         if alias in user_input.lower():
             return sector
-
     print(f"[screener] Warning: sector '{user_input}' not recognized. "
           f"Valid: {', '.join(sorted(VALID_SECTORS))}", file=sys.stderr)
     return None
 
 
-def compute_score(pe, max_pe, roe, min_roe, rev_growth, mcap):
-    """Compute a 0-100 composite score with continuous scaling.
+def _compute_valuation_scores(stocks_data, max_pe):
+    """Compute relative valuation scores using z-scores within the result set.
 
-    Components (weighted):
-    - Valuation  (30%): How far below max_pe — lower P/E scores higher
-    - Profitability (30%): How far above min_roe — higher ROE scores higher
-    - Growth     (25%): Revenue growth rate — higher is better
-    - Scale      (15%): Market cap — larger gets moderate bonus
+    Uses composite of PE and EV/EBITDA. Lower values = higher score.
+    Returns dict of ticker -> valuation score (0-1).
     """
-    score = 0.0
+    # Collect valid PE and EV/EBITDA values
+    pe_values = {}
+    ev_values = {}
+    for d in stocks_data:
+        t = d["ticker"]
+        if d["pe"] and d["pe"] > 0:
+            pe_values[t] = d["pe"]
+        if d["ev_ebitda"] and d["ev_ebitda"] > 0:
+            ev_values[t] = d["ev_ebitda"]
 
-    # Valuation: 0-30 pts
-    if pe and pe > 0 and max_pe > 0:
-        val_ratio = max(0, 1 - pe / max_pe)
-        score += val_ratio * 30
-    elif max_pe <= 0:
-        score += 15  # no PE filter → neutral score
-    else:
-        score += 15  # missing PE data → neutral
+    def _rank_score(values_dict):
+        """Convert values to 0-1 scores where lower value = higher score."""
+        if not values_dict:
+            return {}
+        sorted_items = sorted(values_dict.items(), key=lambda x: x[1])
+        n = len(sorted_items)
+        if n == 1:
+            # Single stock: score based on absolute PE vs threshold
+            t, v = sorted_items[0]
+            if max_pe > 0:
+                return {t: max(0, min(1, 1 - v / max_pe))}
+            return {t: 0.5}
+        scores = {}
+        for rank, (t, _) in enumerate(sorted_items):
+            scores[t] = 1 - rank / (n - 1)  # rank 0 (lowest PE) = 1.0
+        return scores
 
-    # Profitability: 0-30 pts
-    if roe and roe > 0:
-        if min_roe > 0:
-            roe_ratio = max(0, (roe - min_roe) / (min_roe * 2))
+    pe_scores = _rank_score(pe_values)
+    ev_scores = _rank_score(ev_values)
+
+    # Combine: average of available scores
+    result = {}
+    all_tickers = set(d["ticker"] for d in stocks_data)
+    for t in all_tickers:
+        components = []
+        if t in pe_scores:
+            components.append(pe_scores[t])
+        if t in ev_scores:
+            components.append(ev_scores[t])
+        if components:
+            result[t] = sum(components) / len(components)
         else:
-            roe_ratio = min(1, roe / 30)  # no min_roe: 30% ROE = full score
-        score += min(30, roe_ratio * 30)
+            result[t] = 0.5  # neutral if no valuation data
+    return result
 
-    # Growth: 0-25 pts
-    if rev_growth and rev_growth > 0:
-        growth_ratio = min(1, rev_growth / 30)
-        score += growth_ratio * 25
 
-    # Scale: 0-15 pts
-    if mcap and mcap > 0:
-        log_mcap = math.log10(max(mcap, 1e9))
-        scale_ratio = min(1, max(0, (log_mcap - 9) / 3))
-        score += scale_ratio * 15
+def compute_scores(stocks_data, max_pe, min_roe, style="balanced"):
+    """Compute 0-100 composite scores for all stocks using 5-factor model.
 
-    return round(score, 1)
+    Valuation is computed relatively (within result set).
+    Other factors use absolute scaling.
+    Returns list of (ticker, score) tuples.
+    """
+    weights = STYLE_PRESETS.get(style, STYLE_PRESETS["balanced"])
+
+    # Phase A: compute relative valuation scores
+    val_scores = _compute_valuation_scores(stocks_data, max_pe)
+
+    results = {}
+    for d in stocks_data:
+        t = d["ticker"]
+        score = 0.0
+
+        # 1. Valuation (relative within set)
+        score += val_scores.get(t, 0.5) * weights["valuation"]
+
+        # 2. Profitability: ROE above threshold
+        roe = d.get("roe") or 0
+        if roe > 0:
+            if min_roe > 0:
+                prof_ratio = max(0, (roe - min_roe) / (min_roe * 2))
+            else:
+                prof_ratio = min(1, roe / 30)
+            score += min(1, prof_ratio) * weights["profitability"]
+
+        # 3. Growth: blend of revenue + earnings growth
+        rev_g = d.get("rev_growth") or 0
+        earn_g = d.get("earnings_growth") or 0
+        # Use average of available; cap at 50% for scoring
+        growth_vals = []
+        if rev_g != 0:
+            growth_vals.append(rev_g)
+        if earn_g != 0:
+            growth_vals.append(earn_g)
+        if growth_vals:
+            avg_growth = sum(growth_vals) / len(growth_vals)
+            growth_ratio = max(0, min(1, avg_growth / 50))
+            score += growth_ratio * weights["growth"]
+
+        # 4. Momentum: 52-week price change
+        mom = d.get("momentum_52w") or 0
+        # -30% to +80% mapped to 0-1
+        mom_ratio = max(0, min(1, (mom + 30) / 110))
+        score += mom_ratio * weights["momentum"]
+
+        # 5. Safety: debt/equity (lower = safer) + cash flow quality (higher = safer)
+        safety_components = []
+        de = d.get("debt_to_equity")
+        if de is not None and de >= 0:
+            # D/E 0-200: lower is better
+            de_score = max(0, min(1, 1 - de / 200))
+            safety_components.append(de_score)
+        ocf = d.get("ocf") or 0
+        ni = d.get("net_income") or 0
+        if ni > 0 and ocf > 0:
+            # OCF/NI ratio: >1.0 = good cash quality
+            cf_quality = min(1, ocf / ni / 1.5)
+            safety_components.append(cf_quality)
+        if safety_components:
+            safety_score = sum(safety_components) / len(safety_components)
+        else:
+            safety_score = 0.5  # neutral if no data
+        score += safety_score * weights["safety"]
+
+        results[t] = round(score, 1)
+
+    return results
 
 
 def _extract_stock_data(info, quote=None):
-    """Extract standardized stock data from yfinance info dict.
-
-    Shared by both server-side and custom-ticker screening paths.
-    """
+    """Extract standardized stock data from yfinance info dict."""
     ticker = info.get("symbol") or (quote or {}).get("symbol", "")
     pe = info.get("trailingPE") or info.get("forwardPE")
+    forward_pe = info.get("forwardPE")
+    ev_ebitda = info.get("enterpriseToEbitda")
     roe_raw = info.get("returnOnEquity")
     roe = (roe_raw or 0) * 100
     mcap = info.get("marketCap") or (quote or {}).get("marketCap") or 0
     rev_growth = (info.get("revenueGrowth") or 0) * 100
+    earnings_growth = (info.get("earningsGrowth") or 0) * 100
+    momentum_52w = (info.get("52WeekChange") or 0) * 100
+    debt_to_equity = info.get("debtToEquity")
+    ocf = info.get("operatingCashflow") or 0
+    net_income = info.get("netIncomeToCommon") or 0
     name = info.get("shortName") or (quote or {}).get("shortName") or ticker
     price = (info.get("currentPrice")
              or info.get("regularMarketPrice")
@@ -157,16 +246,82 @@ def _extract_stock_data(info, quote=None):
         "industry": info.get("industry") or "",
         "price": price,
         "pe": pe,
+        "forward_pe": forward_pe,
+        "ev_ebitda": ev_ebitda,
         "roe": roe,
         "mcap": mcap,
         "rev_growth": rev_growth,
+        "earnings_growth": earnings_growth,
+        "momentum_52w": momentum_52w,
+        "debt_to_equity": debt_to_equity,
+        "ocf": ocf,
+        "net_income": net_income,
     }
 
 
-def _format_result(data, max_pe, min_roe):
-    """Format extracted stock data into output row with score."""
-    score = compute_score(data["pe"], max_pe, data["roe"], min_roe,
-                          data["rev_growth"], data["mcap"])
+def _normalize_company_name(name):
+    """Normalize company name for deduplication grouping.
+
+    Strips punctuation, suffixes, and whitespace differences so that
+    'Novo-Nordisk A/S' and 'Novo Nordisk A/S' group together.
+    """
+    import re
+    n = name.strip().lower()
+    # Remove common suffixes
+    for suffix in [" inc.", " inc", " ltd.", " ltd", " corp.", " corp",
+                   " co.", " co", " plc", " s.a.", " sa", " ag", " a/s",
+                   " se", " nv", " n.v.", " lp", " llc"]:
+        if n.endswith(suffix):
+            n = n[:-len(suffix)]
+    # Remove punctuation and normalize whitespace
+    n = re.sub(r'[^a-z0-9\s]', ' ', n)
+    n = re.sub(r'\s+', ' ', n).strip()
+    return n
+
+
+def _deduplicate(stocks_data):
+    """Remove duplicate listings of the same company.
+
+    Yahoo Finance returns multiple tickers for the same company (e.g., ADR + OTC
+    foreign ordinary + OTC pink sheets). Group by normalized company name and keep
+    only the best representative ticker per company.
+
+    Tie-breaking: highest market cap wins. When market caps are within 5% of each
+    other, prefer the shorter ticker (typically the primary exchange listing).
+    """
+    from collections import defaultdict
+    groups = defaultdict(list)
+    for d in stocks_data:
+        key = _normalize_company_name(d["name"])
+        groups[key].append(d)
+
+    deduped = []
+    removed = 0
+    for key, entries in groups.items():
+        if len(entries) == 1:
+            deduped.append(entries[0])
+        else:
+            # Sort by market cap descending
+            entries.sort(key=lambda x: x.get("mcap") or 0, reverse=True)
+            best = entries[0]
+            top_mcap = best.get("mcap") or 0
+            # Among entries within 5% of top market cap, prefer shorter ticker
+            if top_mcap > 0:
+                close = [e for e in entries
+                         if (e.get("mcap") or 0) >= top_mcap * 0.95]
+                if len(close) > 1:
+                    best = min(close, key=lambda x: len(x["ticker"]))
+            deduped.append(best)
+            removed += len(entries) - 1
+
+    if removed:
+        print(f"[screener] Deduplicated: {removed} duplicate listings removed", file=sys.stderr)
+
+    return deduped
+
+
+def _format_result(data, score):
+    """Format extracted stock data into output row."""
     return {
         "ticker": data["ticker"],
         "name": data["name"],
@@ -175,30 +330,25 @@ def _format_result(data, max_pe, min_roe):
         "price": round(data["price"], 2),
         "market_cap_B": round(data["mcap"] / 1e9, 1) if data["mcap"] else 0,
         "pe": round(data["pe"], 1) if data["pe"] else "",
+        "forward_pe": round(data["forward_pe"], 1) if data["forward_pe"] else "",
+        "ev_ebitda": round(data["ev_ebitda"], 1) if data["ev_ebitda"] else "",
         "roe_pct": round(data["roe"], 1),
         "revenue_growth_pct": round(data["rev_growth"], 1),
+        "earnings_growth_pct": round(data["earnings_growth"], 1),
+        "momentum_52w_pct": round(data["momentum_52w"], 1),
+        "debt_equity": round(data["debt_to_equity"], 1) if data["debt_to_equity"] is not None else "",
         "score": score,
     }
 
 
 def screen_server_side(region="us", sector=None, max_pe=20, min_roe=15,
                        min_market_cap=1e9, top=25):
-    """Phase 1: Server-side screening via Yahoo Finance EquityQuery.
-
-    Makes ONE API call to Yahoo's screener endpoint which filters on their
-    server and returns only matching stocks.
-
-    Note: The screen response includes price/PE/marketCap but NOT
-    sector/industry/ROE/revenueGrowth — those require Phase 2 enrichment.
-    """
+    """Phase 1: Server-side screening via Yahoo Finance EquityQuery."""
     import yfinance as yf
 
     conditions = []
-
-    # Region filter (always applied)
     conditions.append(yf.EquityQuery('eq', ['region', region]))
 
-    # Sector filter (server-side)
     if sector:
         resolved = resolve_sector(sector)
         if resolved:
@@ -207,15 +357,12 @@ def screen_server_side(region="us", sector=None, max_pe=20, min_roe=15,
         else:
             print(f"[screener] Skipping sector filter (unresolved)", file=sys.stderr)
 
-    # P/E filter (server-side) — skip if max_pe <= 0 (user wants no PE filter)
     if max_pe > 0:
         conditions.append(yf.EquityQuery('btwn', ['peratio.lasttwelvemonths', 0, max_pe]))
 
-    # ROE filter (server-side) — skip if min_roe <= 0
     if min_roe > 0:
         conditions.append(yf.EquityQuery('gt', ['returnonequity.lasttwelvemonths', min_roe / 100]))
 
-    # Market cap filter (server-side)
     if min_market_cap > 0:
         conditions.append(yf.EquityQuery('gt', ['intradaymarketcap', min_market_cap]))
 
@@ -227,7 +374,6 @@ def screen_server_side(region="us", sector=None, max_pe=20, min_roe=15,
                            size=min(top, 250))
     except Exception as e:
         print(f"[screener] Server-side screen failed: {e}", file=sys.stderr)
-        print(f"[screener] This may be a network issue or Yahoo rate limit.", file=sys.stderr)
         return [], 0
 
     total = result.get('total', 0)
@@ -237,21 +383,12 @@ def screen_server_side(region="us", sector=None, max_pe=20, min_roe=15,
     return quotes, total
 
 
-def enrich_with_details(quotes, max_pe, min_roe, industry_filter=None,
-                        min_market_cap=0):
-    """Phase 2: Fetch detailed data (ROE, industry, revenue growth) for candidates.
-
-    The screen response only has price/PE/marketCap. This step fetches the full
-    financial profile for scoring and ranking. Only called for server-side
-    filtered candidates (typically 25-50 stocks).
-
-    Re-validates financial filters against detailed data because server-side
-    screen data can diverge from ticker-level info (stale snapshots, different
-    data sources within Yahoo).
-    """
+def enrich_with_details(quotes, max_pe, min_roe, min_market_cap=0,
+                        industry_filter=None, style="balanced"):
+    """Phase 2: Fetch detailed data and score candidates."""
     import yfinance as yf
 
-    results = []
+    all_data = []
     skipped_industry = 0
     skipped_revalidation = 0
 
@@ -266,13 +403,12 @@ def enrich_with_details(quotes, max_pe, min_roe, industry_filter=None,
             info = yf.Ticker(ticker).info
             data = _extract_stock_data(info, quote=q)
 
-            # Industry filter (client-side — not available in server-side screen)
             if industry_filter:
                 if industry_filter.lower() not in data["industry"].lower():
                     skipped_industry += 1
                     continue
 
-            # Re-validate financial filters against detailed data
+            # Re-validate filters
             if max_pe > 0 and data["pe"] is not None and data["pe"] >= max_pe:
                 skipped_revalidation += 1
                 continue
@@ -283,7 +419,7 @@ def enrich_with_details(quotes, max_pe, min_roe, industry_filter=None,
                 skipped_revalidation += 1
                 continue
 
-            results.append(_format_result(data, max_pe, min_roe))
+            all_data.append(data)
         except Exception as e:
             print(f"[screener] Skip {ticker}: {e}", file=sys.stderr)
             continue
@@ -292,22 +428,30 @@ def enrich_with_details(quotes, max_pe, min_roe, industry_filter=None,
     if industry_filter and skipped_industry:
         print(f"[screener] Industry filter '{industry_filter}': {skipped_industry} skipped", file=sys.stderr)
     if skipped_revalidation:
-        print(f"[screener] Re-validation: {skipped_revalidation} removed (server/detail data mismatch)", file=sys.stderr)
+        print(f"[screener] Re-validation: {skipped_revalidation} removed", file=sys.stderr)
+
+    if not all_data:
+        return []
+
+    all_data = _deduplicate(all_data)
+
+    # Compute scores for all candidates together (relative valuation)
+    scores = compute_scores(all_data, max_pe, min_roe, style)
+    results = []
+    for d in all_data:
+        score = scores.get(d["ticker"], 0)
+        results.append(_format_result(d, score))
 
     results.sort(key=lambda x: x["score"], reverse=True)
     return results
 
 
 def screen_custom_tickers(tickers, max_pe=20, min_roe=15, min_market_cap=1e9,
-                          sector_filter=None, industry_filter=None):
-    """Screen a custom list of tickers (no server-side screening available).
-
-    Used for: --tickers, --index hstech/hsi (predefined HK lists).
-    Each ticker requires an individual API call, so keep lists small.
-    """
+                          sector_filter=None, industry_filter=None, style="balanced"):
+    """Screen a custom list of tickers."""
     import yfinance as yf
 
-    results = []
+    all_data = []
     total = len(tickers)
     print(f"[screener] Screening {total} custom tickers...", file=sys.stderr)
 
@@ -321,7 +465,6 @@ def screen_custom_tickers(tickers, max_pe=20, min_roe=15, min_market_cap=1e9,
 
             data = _extract_stock_data(info)
 
-            # Sector filter (client-side partial match)
             if sector_filter:
                 resolved = resolve_sector(sector_filter) or sector_filter
                 sf = resolved.lower()
@@ -329,12 +472,10 @@ def screen_custom_tickers(tickers, max_pe=20, min_roe=15, min_market_cap=1e9,
                 if sf not in ss and ss not in sf:
                     continue
 
-            # Industry filter (client-side partial match)
             if industry_filter:
                 if industry_filter.lower() not in data["industry"].lower():
                     continue
 
-            # Financial filters
             passes = True
             if max_pe > 0 and data["pe"] is not None and data["pe"] >= max_pe:
                 passes = False
@@ -344,27 +485,39 @@ def screen_custom_tickers(tickers, max_pe=20, min_roe=15, min_market_cap=1e9,
                 passes = False
 
             if passes:
-                results.append(_format_result(data, max_pe, min_roe))
-        except Exception:
+                all_data.append(data)
+        except Exception as e:
+            print(f"{e}", file=sys.stderr)
             continue
         time.sleep(0.05)
+
+    if not all_data:
+        return []
+
+    all_data = _deduplicate(all_data)
+
+    scores = compute_scores(all_data, max_pe, min_roe, style)
+    results = []
+    for d in all_data:
+        score = scores.get(d["ticker"], 0)
+        results.append(_format_result(d, score))
 
     results.sort(key=lambda x: x["score"], reverse=True)
     return results
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Multi-factor stock screener")
+    parser = argparse.ArgumentParser(description="Multi-factor stock screener v2")
     parser.add_argument("--region", default="us",
                         help="Market region: us, hk, gb, jp, etc. (default: us)")
     parser.add_argument("--index", choices=["hsi", "hstech"],
-                        help="Use a predefined HK index universe (bypasses server-side screen)")
+                        help="Predefined HK index universe")
     parser.add_argument("--tickers", nargs="+",
                         help="Custom ticker list (e.g., AAPL MSFT or 0700.HK)")
     parser.add_argument("--sector",
-                        help="Sector filter (e.g., Technology, Healthcare, tech)")
+                        help="Sector filter (e.g., Technology, Healthcare)")
     parser.add_argument("--industry",
-                        help="Industry sub-filter, partial match (e.g., Semiconductors, Banks)")
+                        help="Industry sub-filter, partial match")
     parser.add_argument("--pe", type=float, default=20,
                         help="Max P/E ratio; 0 to disable (default: 20)")
     parser.add_argument("--roe", type=float, default=15,
@@ -373,11 +526,12 @@ def main():
                         help="Min market cap in $B; 0 to disable (default: 1)")
     parser.add_argument("--top", type=int, default=25,
                         help="Max results from server-side screen (default: 25)")
+    parser.add_argument("--style", choices=list(STYLE_PRESETS.keys()),
+                        default="balanced",
+                        help="Scoring style preset (default: balanced)")
     parser.add_argument("--output", default="screener_results.csv")
     args = parser.parse_args()
 
-    # Route: custom tickers or predefined index → individual fetch
-    # Otherwise → server-side screening (much faster)
     use_custom = args.tickers or args.index in ("hsi", "hstech")
 
     if use_custom:
@@ -387,7 +541,7 @@ def main():
         elif args.index == "hsi":
             tickers = HSI_TICKERS if HSI_TICKERS else []
             label = f"Hang Seng Index ({len(tickers)} tickers)"
-        else:  # hstech
+        else:
             tickers = HSTECH_TICKERS if HSTECH_TICKERS else []
             label = f"Hang Seng Tech ({len(tickers)} tickers)"
 
@@ -401,9 +555,9 @@ def main():
             max_pe=args.pe, min_roe=args.roe,
             min_market_cap=args.mcap * 1e9,
             sector_filter=args.sector, industry_filter=args.industry,
+            style=args.style,
         )
     else:
-        # Server-side screening (default path)
         quotes, total = screen_server_side(
             region=args.region,
             sector=args.sector,
@@ -419,8 +573,9 @@ def main():
         results = enrich_with_details(
             quotes,
             max_pe=args.pe, min_roe=args.roe,
-            industry_filter=args.industry,
             min_market_cap=args.mcap * 1e9,
+            industry_filter=args.industry,
+            style=args.style,
         )
 
     if not results:
@@ -429,16 +584,19 @@ def main():
 
     # Write CSV
     fieldnames = ["ticker", "name", "sector", "industry", "price",
-                  "market_cap_B", "pe", "roe_pct", "revenue_growth_pct", "score"]
+                  "market_cap_B", "pe", "forward_pe", "ev_ebitda",
+                  "roe_pct", "revenue_growth_pct", "earnings_growth_pct",
+                  "momentum_52w_pct", "debt_equity", "score"]
     with open(args.output, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(results)
 
     # --- Formatted output report ---
-    print(f"\n{'=' * 80}")
+    weights = STYLE_PRESETS[args.style]
+    print(f"\n{'=' * 90}")
     print("SCREENING RESULTS")
-    print(f"{'=' * 80}")
+    print(f"{'=' * 90}")
 
     # Filters summary
     filters = []
@@ -455,29 +613,45 @@ def main():
     if args.mcap > 0:
         filters.append(f"Market Cap > ${args.mcap}B")
     print(f"Filters: {' | '.join(filters) if filters else 'None'}")
-    print(f"Results: {len(results)} stocks passed")
+    print(f"Style:   {args.style} | Results: {len(results)} stocks passed")
     print(f"Output:  {args.output}")
 
     # Scoring methodology
-    print(f"\nScoring: Valuation(30%) + Profitability(30%) + Growth(25%) + Scale(15%) = 0-100")
-    pe_note = f"PE<{args.pe} threshold" if args.pe > 0 else "PE not filtered"
-    roe_note = f"ROE>{args.roe}% threshold" if args.roe > 0 else "ROE not filtered"
-    print(f"  Valuation:     Lower P/E relative to {pe_note} scores higher")
-    print(f"  Profitability: Higher ROE above {roe_note} scores higher")
-    print(f"  Growth:        Revenue growth 0-30%+ mapped linearly")
-    print(f"  Scale:         Market cap $1B-$1T on log scale")
+    print(f"\nScoring ({args.style}): "
+          f"Valuation({weights['valuation']}%) + "
+          f"Profitability({weights['profitability']}%) + "
+          f"Growth({weights['growth']}%) + "
+          f"Momentum({weights['momentum']}%) + "
+          f"Safety({weights['safety']}%) = 0-100")
+    print(f"  Valuation:     Composite PE + EV/EBITDA, relative within result set")
+    print(f"  Profitability: ROE above threshold")
+    print(f"  Growth:        Revenue + earnings growth blend")
+    print(f"  Momentum:      52-week price change")
+    print(f"  Safety:        Low debt/equity + strong cash flow quality")
 
     # Formatted table
-    print(f"\n{'Rank':<5} {'Ticker':<8} {'Company':<28} {'Industry':<24} "
-          f"{'P/E':>6} {'ROE%':>7} {'Growth%':>8} {'MCap($B)':>9} {'Score':>6}")
-    print(f"{'-' * 5} {'-' * 8} {'-' * 28} {'-' * 24} "
-          f"{'-' * 6} {'-' * 7} {'-' * 8} {'-' * 9} {'-' * 6}")
+    print(f"\n{'Rank':<5} {'Ticker':<8} {'Company':<28} {'Industry':<20} "
+          f"{'P/E':>6} {'EV/EB':>6} {'ROE%':>6} {'Grw%':>6} {'Mom%':>6} "
+          f"{'D/E':>6} {'MCap$B':>7} {'Score':>6}")
+    print(f"{'-' * 5} {'-' * 8} {'-' * 28} {'-' * 20} "
+          f"{'-' * 6} {'-' * 6} {'-' * 6} {'-' * 6} {'-' * 6} "
+          f"{'-' * 6} {'-' * 7} {'-' * 6}")
 
     for i, r in enumerate(results[:20], 1):
         pe_str = f"{r['pe']:.1f}" if r['pe'] != '' else '-'
-        print(f"{i:<5} {r['ticker']:<8} {r['name'][:27]:<28} {r['industry'][:23]:<24} "
-              f"{pe_str:>6} {r['roe_pct']:>6.1f}% {r['revenue_growth_pct']:>7.1f}% "
-              f"{r['market_cap_B']:>8.1f} {r['score']:>6.1f}")
+        ev_str = f"{r['ev_ebitda']:.1f}" if r['ev_ebitda'] != '' else '-'
+        de_str = f"{r['debt_equity']:.1f}" if r['debt_equity'] != '' else '-'
+        # Growth: average of revenue + earnings
+        rev_g = r['revenue_growth_pct']
+        earn_g = r['earnings_growth_pct']
+        if rev_g and earn_g:
+            grw = (rev_g + earn_g) / 2
+        else:
+            grw = rev_g or earn_g or 0
+        print(f"{i:<5} {r['ticker']:<8} {r['name'][:27]:<28} {r['industry'][:19]:<20} "
+              f"{pe_str:>6} {ev_str:>6} {r['roe_pct']:>5.1f}% {grw:>5.1f}% "
+              f"{r['momentum_52w_pct']:>5.1f}% {de_str:>6} {r['market_cap_B']:>7.1f} "
+              f"{r['score']:>6.1f}")
 
     if len(results) > 20:
         print(f"  ... and {len(results) - 20} more (see CSV)")
@@ -496,7 +670,7 @@ def main():
     print(f"  Lowest:  {min(scores):.1f} ({results[-1]['ticker']})")
     print(f"  Average: {sum(scores)/len(scores):.1f}")
 
-    print(f"\n{'=' * 80}")
+    print(f"\n{'=' * 90}")
 
 
 if __name__ == "__main__":
