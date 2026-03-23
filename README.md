@@ -4,24 +4,21 @@
 
 Built for investors, analysts, and portfolio managers who want AI-powered financial analysis directly in their workflow — without switching tools.
 
+Inspired by [Claude for Financial Services Skills](https://claude.com/resources/tutorials/claude-for-financial-services-skills).
+
 ---
 
 ## Skills
 
 | Skill | Description |
 |-------|-------------|
-| [stock-analysis](./stock-analysis) | Stock & crypto analysis with 8-dimension scoring, portfolio tracking, watchlists, dividend analysis, hot scanner |
-| [financial-modeling](./financial-modeling) | Three-statement financial models (income statement, balance sheet, cash flow) with scenario analysis |
-| [dcf-modeling](./dcf-modeling) | DCF valuation with WACC, FCFF/FCFE/APV approaches and sensitivity tables |
-| [comparables-analysis](./comparables-analysis) | Peer benchmarking with EV/Revenue, EV/EBITDA, P/E, P/B multiples |
-| [competitive-landscape](./competitive-landscape) | Market positioning assessment and competitive dynamics evaluation |
-| [earnings-analysis](./earnings-analysis) | Earnings update reports — beat/miss analysis, guidance review, estimate revisions |
-| [initiating-coverage](./initiating-coverage) | Initiating coverage research — business model, competitive positioning, valuation |
-| [due-diligence](./due-diligence) | Data room processing — financials, customer lists, contract terms, risk factors |
-| [pitch-deck](./pitch-deck) | Populate investment banking pitch deck templates with financial data |
-| [strip-profile](./strip-profile) | Concise 1-2 page company summaries for pitch books and buyer lists |
-| [tecent-finance](./tecent-finance) | Real-time stock quotes via Tencent Finance API (US, A-shares, HK) — no API key needed |
-| [competitive-landscape](./competitive-landscape) | Structured competitive landscape assessments with strategic recommendations |
+| [comparables-analysis](./comparables-analysis) | Peer benchmarking tables with valuation multiples (EV/Revenue, EV/EBITDA, P/E, P/B) that auto-refresh with live data |
+| [dcf-modeling](./dcf-modeling) | DCF valuation models with WACC calculations, scenario toggles (base/bull/bear), and sensitivity tables |
+| [financial-modeling](./financial-modeling) | Three-statement financial models (income statement, balance sheet, cash flow) with full linkages and scenario analysis |
+| [initiating-coverage](./initiating-coverage) | Comprehensive company research — business model, competitive positioning, financial performance, and investment recommendation |
+| [due-diligence](./due-diligence) | Process data room documents (CIMs, offering memos) into structured Excel data packs with financials and risk factors |
+| [earnings-analysis](./earnings-analysis) | Fast-turnaround earnings update reports — beat/miss analysis, guidance review, estimate revisions, thesis impact |
+| [competitive-landscape](./competitive-landscape) | Structured competitive landscape assessments with market positioning and strategic recommendations |
 
 ---
 
@@ -38,17 +35,14 @@ Built for investors, analysts, and portfolio managers who want AI-powered financ
 ### Install all skills
 
 ```bash
-# Clone the repo
 git clone https://github.com/zwaydot/alpha-skills.git
-
-# Copy skills to your OpenClaw workspace
 cp -r alpha-skills/* ~/.openclaw/workspace/skills/
 ```
 
 ### Install a single skill
 
 ```bash
-cp -r alpha-skills/stock-analysis ~/.openclaw/workspace/skills/
+cp -r alpha-skills/dcf-modeling ~/.openclaw/workspace/skills/
 ```
 
 ---
@@ -60,10 +54,6 @@ Each skill has a `SKILL.md` with detailed instructions. OpenClaw automatically r
 **Example prompts:**
 
 ```
-Analyze $AAPL with 8-dimension scoring
-```
-
-```
 Build a DCF model for Tesla with base/bull/bear scenarios
 ```
 
@@ -73,6 +63,10 @@ Find comparable companies for a SaaS company with $50M ARR
 
 ```
 Generate an earnings update for NVDA Q4 2025 results
+```
+
+```
+Create a three-statement financial model from this 10-K filing
 ```
 
 ---
