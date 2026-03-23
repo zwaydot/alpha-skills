@@ -9,8 +9,16 @@ Usage:
 """
 
 import sys
+import os
 import json
 from datetime import datetime
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'lib'))
+try:
+    from market import detect_market, get_tax_rate
+except ImportError:
+    def detect_market(ticker): return "US"
+    def get_tax_rate(market): return 0.21
 
 try:
     import yfinance as yf
@@ -55,17 +63,20 @@ def compute_trend(values: list) -> dict:
 
 
 def score_metric(values: list, excellent_threshold: float, good_threshold: float) -> float:
-    """Score a metric based on average level. Returns 0.0–1.0."""
+    """Score a metric based on average level. Returns 0.0–1.0 with linear interpolation."""
     vals = [v for v in values if v is not None]
     if not vals:
         return 0.0
     avg = sum(vals) / len(vals)
+    floor = good_threshold * 0.5  # below this = 0
     if avg >= excellent_threshold:
         return 1.0
     elif avg >= good_threshold:
-        return 0.6
-    elif avg >= good_threshold * 0.7:
-        return 0.3
+        # Linear from 0.6 to 1.0
+        return round(0.6 + 0.4 * (avg - good_threshold) / (excellent_threshold - good_threshold), 3)
+    elif avg >= floor:
+        # Linear from 0.0 to 0.6
+        return round(0.6 * (avg - floor) / (good_threshold - floor), 3)
     return 0.0
 
 
@@ -85,6 +96,8 @@ def score_stability(values: list) -> float:
 def fetch_quality(ticker_sym: str) -> dict:
     t = yf.Ticker(ticker_sym)
     info = t.info
+    market = detect_market(ticker_sym)
+    tax_rate = get_tax_rate(market)
 
     name = info.get("longName") or info.get("shortName", ticker_sym)
 
@@ -160,10 +173,11 @@ def fetch_quality(ticker_sym: str) -> dict:
         gross_margin = round(gp / rev * 100, 2) if gp and rev and rev != 0 else None
         net_margin = round(ni / rev * 100, 2) if ni and rev and rev != 0 else None
 
-        # ROIC = EBIT*(1-tax) / (total_debt + equity - cash)
-        tax_rate = 0.21
+        # ROIC = NOPAT / Invested Capital
+        # NOPAT = EBIT * (1 - tax_rate)
+        # Invested Capital = Total Debt + Equity - Cash
         nopat = ebit * (1 - tax_rate) if ebit else None
-        invested_capital = (total_assets or 0) - (cash or 0) - ((total_assets or 0) - (total_debt or 0) - (equity or 0))
+        invested_capital = (total_debt or 0) + (equity or 0) - (cash or 0)
         roic = round(nopat / invested_capital * 100, 2) if nopat and invested_capital and invested_capital != 0 else None
 
         roe_series.append(roe)

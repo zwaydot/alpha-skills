@@ -1,14 +1,11 @@
+---
+name: Competitive Dynamics
+description: Competitive landscape analysis — compares a target company against peers on revenue growth CAGR, margin trends, and R&D intensity over 3 years. Use this when the user asks about competitive positioning, market share dynamics, peer comparison, or wants to know who is gaining/losing ground in an industry.
+---
+
 # competitive-dynamics
 
-**Stage:** 深度研究 (Deep Research)
-
-## Description
-
-Competitive landscape analysis tool. Compares a target company against its peers across revenue growth, margin trends, and key financial ratios over 3 years. Reveals who is gaining share, who is losing ground, and where the competitive dynamics are shifting.
-
-## Name
-
-Competitive Dynamics Analysis
+**Stage:** Deep Research
 
 ## Inputs
 
@@ -34,7 +31,6 @@ JSON report containing:
 | Revenue Growth (3Y CAGR) | Compound annual growth rate of revenue |
 | Gross Margin Trend | 3-year direction and average level |
 | Net Margin Trend | 3-year direction and average level |
-| Operating Leverage | Change in operating margin vs. revenue growth |
 | R&D Intensity | R&D as % of revenue (for tech/pharma) |
 
 ## Data Sources

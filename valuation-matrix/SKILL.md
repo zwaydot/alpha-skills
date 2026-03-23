@@ -1,18 +1,15 @@
+---
+name: Valuation Matrix
+description: Multi-method valuation framework with sector-aware multiples. Triangulates intrinsic value using FCF yield, EV/EBITDA, P/E (with industry-appropriate ranges), and analyst consensus targets. Use this when the user asks about fair value, intrinsic value, whether a stock is overvalued/undervalued, or wants bear/base/bull price targets.
+---
+
 # valuation-matrix
 
-**Stage:** 估值 (Valuation)
-
-## Description
-
-Multi-method valuation framework. Triangulates intrinsic value using FCF yield, EV/EBITDA, P/E, and analyst consensus price targets. Outputs a structured valuation range with upside/downside scenarios.
-
-## Name
-
-Valuation Matrix
+**Stage:** Valuation
 
 ## Inputs
 
-- `ticker` — Single stock ticker symbol (e.g., `AAPL`)
+- `ticker` — Stock ticker symbol (e.g., `AAPL`, `0700.HK`). Market and sector are auto-detected to select appropriate valuation multiples.
 
 ## Outputs
 
@@ -29,18 +26,20 @@ JSON valuation model containing:
 
 ## Valuation Methods
 
+All multiple ranges are **sector-aware** — the script automatically selects appropriate ranges based on the company's sector (e.g., Technology gets higher P/E ranges than Energy).
+
 | Method | Description |
 |--------|-------------|
-| FCF Yield | Implied fair value based on 4–6% FCF yield range |
-| EV/EBITDA | Implied equity value using 10–18x EBITDA range |
-| P/E Multiple | Implied price using 15–25x earnings range |
+| FCF Yield | Implied fair value based on sector-appropriate FCF yield range |
+| EV/EBITDA | Implied equity value using sector-appropriate EBITDA multiple range |
+| P/E Multiple | Implied price using sector-appropriate earnings multiple range |
 | Analyst Consensus | Median analyst 12-month price target |
 
 ## Valuation Range Logic
 
-- **Bear Case**: 10th percentile of all method outputs
-- **Base Case**: Median of all method outputs
-- **Bull Case**: 90th percentile of all method outputs
+- **Bear Case**: Median of all methods' bear-case prices
+- **Base Case**: Median of all methods' base-case prices
+- **Bull Case**: Median of all methods' bull-case prices
 
 ## Data Sources
 

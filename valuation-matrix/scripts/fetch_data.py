@@ -9,8 +9,16 @@ Usage:
 """
 
 import sys
+import os
 import json
 from datetime import datetime
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'lib'))
+try:
+    from market import detect_market, get_sector_multiples as _get_mkt_multiples
+except ImportError:
+    def detect_market(ticker): return "US"
+    _get_mkt_multiples = None
 
 try:
     import yfinance as yf
@@ -36,6 +44,13 @@ def fetch_valuation_data(ticker_sym: str) -> dict:
     info = t.info
 
     name = info.get("longName") or info.get("shortName", ticker_sym)
+    sector = info.get("sector")
+    market = detect_market(ticker_sym)
+    if _get_mkt_multiples:
+        multiples = _get_mkt_multiples(market, sector)
+    else:
+        # Fallback: US defaults
+        multiples = {"pe": (15, 20, 25), "ev_ebitda": (10, 14, 18), "fcf_yield": (0.04, 0.05, 0.06)}
     current_price = safe_float(info.get("currentPrice") or info.get("regularMarketPrice"))
     market_cap = safe_float(info.get("marketCap"))
     ev = safe_float(info.get("enterpriseValue"))
@@ -109,26 +124,28 @@ def fetch_valuation_data(ticker_sym: str) -> dict:
     # ── Valuation Methods ──────────────────────────────────────────────────────
     valuation_methods = {}
 
-    # 1. FCF Yield method (target: 4–6% FCF yield → price = FCF/share / yield)
-    if fcf_per_share and current_price:
-        fcf_yield_bear = round(fcf_per_share / 0.06, 2)  # 6% yield = cheapest
-        fcf_yield_base = round(fcf_per_share / 0.05, 2)  # 5% yield = fair
-        fcf_yield_bull = round(fcf_per_share / 0.04, 2)  # 4% yield = premium
+    # 1. FCF Yield method (sector-aware yield targets)
+    fcf_yields = multiples["fcf_yield"]  # (bull_yield, base_yield, bear_yield) — lower yield = higher price
+    if fcf_per_share and current_price and fcf_per_share > 0:
+        fcf_yield_bear = round(fcf_per_share / fcf_yields[2], 2)  # highest yield = cheapest price
+        fcf_yield_base = round(fcf_per_share / fcf_yields[1], 2)
+        fcf_yield_bull = round(fcf_per_share / fcf_yields[0], 2)  # lowest yield = highest price
         valuation_methods["fcf_yield"] = {
             "fcf_per_share": fcf_per_share,
             "bear_price": fcf_yield_bear,
             "base_price": fcf_yield_base,
             "bull_price": fcf_yield_bull,
-            "method": "FCF/share divided by target yield (4–6%)",
+            "yield_range": f"{fcf_yields[0]*100:.0f}–{fcf_yields[2]*100:.0f}%",
+            "method": f"FCF/share ÷ target yield ({fcf_yields[0]*100:.0f}–{fcf_yields[2]*100:.0f}%, sector: {sector or 'default'})",
         }
 
-    # 2. EV/EBITDA method
+    # 2. EV/EBITDA method (sector-aware multiples)
+    ev_mults = multiples["ev_ebitda"]  # (bear, base, bull)
     if ebitda and shares_outstanding and total_debt is not None and cash is not None:
         net_debt = (total_debt or 0) - (cash or 0)
-        # Equity value = EBITDA × multiple - net_debt
-        ev_base = ebitda * 14  # 14x EBITDA = base
-        ev_bear = ebitda * 10
-        ev_bull = ebitda * 18
+        ev_bear = ebitda * ev_mults[0]
+        ev_base = ebitda * ev_mults[1]
+        ev_bull = ebitda * ev_mults[2]
         eq_bear = (ev_bear - net_debt) / shares_outstanding
         eq_base = (ev_base - net_debt) / shares_outstanding
         eq_bull = (ev_bull - net_debt) / shares_outstanding
@@ -137,22 +154,25 @@ def fetch_valuation_data(ticker_sym: str) -> dict:
             "bear_price": round(eq_bear, 2),
             "base_price": round(eq_base, 2),
             "bull_price": round(eq_bull, 2),
-            "method": "EV/EBITDA multiple range 10–18x",
+            "multiple_range": f"{ev_mults[0]}–{ev_mults[2]}x",
+            "method": f"EV/EBITDA {ev_mults[0]}–{ev_mults[2]}x (sector: {sector or 'default'})",
         }
 
-    # 3. P/E multiple method
+    # 3. P/E multiple method (sector-aware multiples)
+    pe_mults = multiples["pe"]  # (bear, base, bull)
     eps = eps_ttm or eps_forward
     if eps and eps > 0:
-        pe_bear = round(eps * 15, 2)  # 15x
-        pe_base = round(eps * 20, 2)  # 20x
-        pe_bull = round(eps * 25, 2)  # 25x
+        pe_bear = round(eps * pe_mults[0], 2)
+        pe_base = round(eps * pe_mults[1], 2)
+        pe_bull = round(eps * pe_mults[2], 2)
         valuation_methods["pe_multiple"] = {
             "eps": eps,
             "eps_type": "ttm" if eps_ttm else "forward",
             "bear_price": pe_bear,
             "base_price": pe_base,
             "bull_price": pe_bull,
-            "method": "EPS × P/E multiple range 15–25x",
+            "multiple_range": f"{pe_mults[0]}–{pe_mults[2]}x",
+            "method": f"EPS × P/E {pe_mults[0]}–{pe_mults[2]}x (sector: {sector or 'default'})",
         }
 
     # 4. Analyst consensus
@@ -204,6 +224,8 @@ def fetch_valuation_data(ticker_sym: str) -> dict:
     return {
         "ticker": ticker_sym.upper(),
         "company_name": name,
+        "sector": sector,
+        "market": market,
         "analysis_date": datetime.now().strftime("%Y-%m-%d"),
         "current_price": current_price,
         "market_cap": market_cap,

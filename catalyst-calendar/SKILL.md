@@ -1,14 +1,11 @@
+---
+name: Catalyst Calendar
+description: 90-day event calendar aggregating upcoming earnings dates and ex-dividend dates from Yahoo Finance. Use this when the user asks about upcoming earnings, dividend dates, corporate events, catalysts, or wants to plan trade timing around key dates for specific tickers.
+---
+
 # catalyst-calendar
 
-**Stage:** 事件驱动 (Event-Driven)
-
-## Description
-
-90-day catalyst calendar for a list of tickers. Aggregates upcoming earnings dates, dividend ex-dates, and dividend payment dates from Yahoo Finance. Outputs a chronological Markdown calendar to help plan trade timing around key corporate events.
-
-## Name
-
-Catalyst Calendar
+**Stage:** Event-Driven
 
 ## Inputs
 
@@ -28,7 +25,6 @@ Markdown calendar containing:
 |-------|-------------|
 | 📊 Earnings | Quarterly earnings release date |
 | 💰 Ex-Dividend | Last day to own stock to receive dividend |
-| 💵 Dividend Payment | Date dividend is paid to shareholders |
 
 ## Data Sources
 

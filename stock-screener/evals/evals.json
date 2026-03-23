@@ -1,0 +1,47 @@
+{
+  "skill_name": "stock-screener",
+  "evals": [
+    {
+      "id": 0,
+      "name": "sp500-tech-sector",
+      "prompt": "I want to find some US tech stocks that are not too expensive and have solid profitability. PE under 25, ROE at least 20%. What are the best picks right now?",
+      "expected_output": "Uses server-side screening via yf.screen(), applies Technology sector + PE/ROE filters, returns ranked list with scores and industry breakdown",
+      "files": [],
+      "assertions": [
+        {"name": "server_side_screening", "description": "Uses server-side API, not scanning 500+ tickers individually"},
+        {"name": "sector_filter_applied", "description": "Technology sector filter applied correctly"},
+        {"name": "multiple_results", "description": "Returns multiple stocks (not just 1-2)"},
+        {"name": "industry_in_output", "description": "Output includes industry field"},
+        {"name": "score_differentiation", "description": "Clear score ranking with meaningful spread"}
+      ]
+    },
+    {
+      "id": 1,
+      "name": "hstech-quality",
+      "prompt": "Help me look at the Hang Seng Tech index — which stocks in it have good fundamentals? I care about profitability and valuation being reasonable.",
+      "expected_output": "Uses --index hstech, screens 27 HK tickers, returns quality-ranked list with .HK format",
+      "files": [],
+      "assertions": [
+        {"name": "hstech_index_used", "description": "Used --index hstech, loaded 27 tickers"},
+        {"name": "hk_tickers_present", "description": "All results use .HK ticker format"},
+        {"name": "industry_in_output", "description": "Industry field present"},
+        {"name": "score_differentiation", "description": "Clear score ranking"},
+        {"name": "csv_output_exists", "description": "CSV output file produced"}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "custom-8stocks",
+      "prompt": "I'm watching these stocks: AAPL MSFT NVDA TSLA META AMZN GOOGL JPM. Which ones are actually good value right now? Filter out anything with PE over 40 or ROE below 10%.",
+      "expected_output": "Screens all 8 tickers with --pe 40 --roe 10, TSLA filtered out (PE ~80), 7 stocks ranked by score",
+      "files": [],
+      "assertions": [
+        {"name": "all_tickers_screened", "description": "All 8 tickers were screened"},
+        {"name": "custom_filters_used", "description": "Applied PE<40 and ROE>10% filters"},
+        {"name": "tsla_filtered_out", "description": "TSLA excluded by filters"},
+        {"name": "score_differentiation", "description": "Clear score ranking"},
+        {"name": "industry_in_output", "description": "Output includes industry field"}
+      ]
+    }
+  ]
+}

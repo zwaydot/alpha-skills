@@ -2,7 +2,7 @@
 
 > OpenClaw skills for buy-side investment decision-making.
 
-A structured toolkit covering the full investment workflow — from screening candidates to monitoring your portfolio.
+A structured toolkit covering the full investment workflow — from screening candidates to monitoring your portfolio. Supports **US and HK markets**, with an extensible architecture for adding new markets.
 
 ---
 
@@ -10,16 +10,27 @@ A structured toolkit covering the full investment workflow — from screening ca
 
 | Stage | Skill | Description |
 |-------|-------|-------------|
-| 找标的 | [stock-screener](./stock-screener) | Multi-factor screening across any universe (S&P 500, Nasdaq 100, sector ETFs, or custom tickers) — filters by P/E, ROE, revenue growth, market cap |
-| 找标的 | [sector-radar](./sector-radar) | Sector rotation scanner — ranks 10 industry ETFs by momentum, valuation, and relative strength |
-| 研究公司 | [business-quality](./business-quality) | Moat assessment — 5-year ROE/ROIC/margin trends scored into a business quality rating |
-| 研究公司 | [competitive-dynamics](./competitive-dynamics) | Competitive landscape — revenue CAGR and margin comparison across a peer group |
-| 估值 | [valuation-matrix](./valuation-matrix) | Multi-method valuation — DCF + EV/EBITDA + P/FCF + P/E cross-check → implied price range |
-| 决策支持 | [risk-framework](./risk-framework) | Systematic risk scoring — beta, volatility, leverage, liquidity → overall risk rating |
-| 持仓管理 | [portfolio-monitor](./portfolio-monitor) | Portfolio analytics — correlation matrix, volatility contributions, concentration risk |
-| 持仓管理 | [catalyst-calendar](./catalyst-calendar) | 90-day catalyst calendar — earnings dates, dividend dates, key events |
+| Idea Generation | [stock-screener](./stock-screener) | Two-phase server-side screening — filters by sector, P/E, ROE, market cap across US/HK/custom tickers, then scores and ranks candidates |
+| Idea Generation | [sector-radar](./sector-radar) | Sector rotation scanner — ranks 10 industry ETFs by momentum, valuation, and relative strength |
+| Deep Research | [business-quality](./business-quality) | Moat assessment — 5-year ROE/ROIC/margin trends scored into a business quality rating |
+| Deep Research | [competitive-dynamics](./competitive-dynamics) | Competitive landscape — revenue CAGR and margin comparison across a peer group |
+| Valuation | [valuation-matrix](./valuation-matrix) | Multi-method valuation — FCF Yield + EV/EBITDA + P/E (sector-aware multiples) + analyst consensus → implied price range |
+| Decision Support | [risk-framework](./risk-framework) | Systematic risk scoring — beta, volatility, leverage, liquidity → overall risk rating |
+| Portfolio Management | [portfolio-monitor](./portfolio-monitor) | Portfolio analytics — correlation matrix, volatility contributions, concentration risk |
+| Portfolio Management | [catalyst-calendar](./catalyst-calendar) | 90-day catalyst calendar — earnings dates, dividend dates, key events |
 
 ---
+
+## Supported Markets
+
+| Market | Indices | Sector Radar | Valuation | Notes |
+|--------|---------|-------------|-----------|-------|
+| 🇺🇸 US | S&P 500, Nasdaq 100, Russell 2000 | 10 SPDR ETFs | Sector-aware multiples | Full support |
+| 🇭🇰 HK | Hang Seng, HSTECH | 6 HK ETFs | HK-discount multiples | Full support |
+| 🇨🇳 CN | — | — | A-share multiples | Ticker support (`600519.SS`) |
+| Others | — | — | US defaults | Any yfinance ticker works |
+
+To add a new market: update `lib/market.py` with tax rate, risk-free rate, and sector multiples.
 
 ## Requirements
 
@@ -52,10 +63,12 @@ Data scripts run independently — fetch real market data before analysis:
 
 ```bash
 # Screen for quality stocks
-python3 stock-screener/scripts/fetch_data.py                    # S&P 500 default
-python3 stock-screener/scripts/fetch_data.py --index nasdaq100  # Nasdaq 100
-python3 stock-screener/scripts/fetch_data.py --sector XLK       # Tech sector
-python3 stock-screener/scripts/fetch_data.py --tickers AAPL MSFT NVDA  # Custom
+python3 stock-screener/scripts/fetch_data.py --sector Technology --pe 25        # US tech, PE<25
+python3 stock-screener/scripts/fetch_data.py --sector Technology --industry Semiconductors  # Sub-industry
+python3 stock-screener/scripts/fetch_data.py --index hstech                     # Hang Seng Tech
+python3 stock-screener/scripts/fetch_data.py --region hk --sector Technology    # HK tech
+python3 stock-screener/scripts/fetch_data.py --tickers AAPL MSFT NVDA --pe 40 --roe 10     # Custom list
+python3 stock-screener/scripts/fetch_data.py --sector Technology --pe 0 --roe 0 --top 50   # No filters
 
 # Assess business quality
 python3 business-quality/scripts/fetch_data.py AAPL
@@ -73,7 +86,7 @@ python3 catalyst-calendar/scripts/fetch_data.py "AAPL MSFT NVDA TSLA"
 **Example prompts:**
 
 ```
-Run the stock screener and identify the top 10 quality candidates from today's results
+Find US tech stocks with PE under 25 and strong profitability — what are the best picks?
 ```
 
 ```

@@ -9,8 +9,16 @@ Usage:
 """
 
 import sys
+import os
 import json
 from datetime import datetime, timedelta
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'lib'))
+try:
+    from market import detect_market, get_risk_free_rate
+except ImportError:
+    def detect_market(ticker): return "US"
+    def get_risk_free_rate(market): return 0.045
 
 try:
     import yfinance as yf
@@ -157,6 +165,103 @@ def score_liquidity_risk(current_ratio: float | None, quick_ratio: float | None)
     return min(100, score), risks
 
 
+def score_earnings_quality(ticker_sym: str, info: dict) -> tuple[float, list[str]]:
+    """Evaluate earnings quality via accruals ratio and FCF/Net Income ratio. Returns (score 0-100, risk_flags)."""
+    risks = []
+    score = 0.0
+
+    t = yf.Ticker(ticker_sym)
+
+    # FCF / Net Income ratio — high-quality earnings are backed by cash flow
+    fcf_ni_ratio = None
+    try:
+        cf = t.cashflow
+        fin = t.financials
+        if cf is not None and not cf.empty and fin is not None and not fin.empty:
+            col_cf = cf.columns[0]
+            col_fin = fin.columns[0]
+
+            ocf = None
+            for key in ["Operating Cash Flow", "Total Cash From Operating Activities"]:
+                if key in cf.index:
+                    ocf = safe_float(cf.loc[key, col_cf])
+                    break
+            capex = None
+            for key in ["Capital Expenditure", "Capital Expenditures"]:
+                if key in cf.index:
+                    capex = safe_float(cf.loc[key, col_cf])
+                    break
+
+            ni = None
+            if "Net Income" in fin.index:
+                ni = safe_float(fin.loc["Net Income", col_fin])
+
+            if ocf is not None and capex is not None and ni and ni != 0:
+                fcf = ocf + capex  # capex is usually negative
+                fcf_ni_ratio = round(fcf / ni, 2)
+    except Exception:
+        pass
+
+    if fcf_ni_ratio is not None:
+        if fcf_ni_ratio < 0:
+            score += 60
+            risks.append(f"Negative FCF despite positive earnings (FCF/NI: {fcf_ni_ratio:.2f})")
+        elif fcf_ni_ratio < 0.5:
+            score += 40
+            risks.append(f"Low cash conversion (FCF/NI: {fcf_ni_ratio:.2f})")
+        elif fcf_ni_ratio < 0.8:
+            score += 20
+        elif fcf_ni_ratio < 1.2:
+            score += 0  # healthy
+        else:
+            score += 0  # FCF > NI is fine (conservative accounting)
+    else:
+        score += 25  # unknown = moderate penalty
+
+    # Accruals ratio — high accruals signal lower earnings quality
+    # Accruals = Net Income - Operating Cash Flow; ratio = Accruals / Total Assets
+    accruals_ratio = None
+    try:
+        cf = t.cashflow
+        fin = t.financials
+        bs = t.balance_sheet
+        if all(x is not None and not x.empty for x in [cf, fin, bs]):
+            col = cf.columns[0]
+            ocf = None
+            for key in ["Operating Cash Flow", "Total Cash From Operating Activities"]:
+                if key in cf.index:
+                    ocf = safe_float(cf.loc[key, col])
+                    break
+            ni = safe_float(fin.loc["Net Income", fin.columns[0]]) if "Net Income" in fin.index else None
+            total_assets = None
+            for key in ["Total Assets"]:
+                if key in bs.index:
+                    total_assets = safe_float(bs.loc[key, bs.columns[0]])
+                    break
+
+            if ocf is not None and ni is not None and total_assets and total_assets != 0:
+                accruals = ni - ocf
+                accruals_ratio = round(accruals / total_assets, 4)
+    except Exception:
+        pass
+
+    if accruals_ratio is not None:
+        abs_accruals = abs(accruals_ratio)
+        if abs_accruals > 0.10:
+            score += 40
+            risks.append(f"High accruals ratio ({accruals_ratio:.2%} of assets)")
+        elif abs_accruals > 0.05:
+            score += 20
+        elif abs_accruals > 0.03:
+            score += 10
+        else:
+            score += 0  # low accruals = good
+    else:
+        score += 15
+
+    return min(100, score), risks
+
+
 def fetch_risk_data(ticker_sym: str) -> dict:
     t = yf.Ticker(ticker_sym)
     info = t.info
@@ -202,13 +307,16 @@ def fetch_risk_data(ticker_sym: str) -> dict:
     current_ratio = safe_float(info.get("currentRatio"))
     quick_ratio = safe_float(info.get("quickRatio"))
 
+    # Earnings quality
+    eq_score, eq_risks = score_earnings_quality(ticker_sym, info)
+
     # Score each dimension
     mkt_score, mkt_risks = score_market_risk(beta, vol)
     lev_score, lev_risks = score_leverage_risk(de_ratio, interest_coverage, debt_ebitda)
     liq_score, liq_risks = score_liquidity_risk(current_ratio, quick_ratio)
 
     # Weighted overall score
-    overall = round(mkt_score * 0.30 + lev_score * 0.30 + liq_score * 0.20 + 20 * 0.20, 1)  # earnings quality placeholder 20
+    overall = round(mkt_score * 0.30 + lev_score * 0.30 + liq_score * 0.20 + eq_score * 0.20, 1)
 
     if overall <= 25:
         risk_level = "Low"
@@ -219,7 +327,7 @@ def fetch_risk_data(ticker_sym: str) -> dict:
     else:
         risk_level = "Very High"
 
-    all_risks = mkt_risks + lev_risks + liq_risks
+    all_risks = mkt_risks + lev_risks + liq_risks + eq_risks
     key_risks = all_risks[:3]
 
     return {
@@ -232,6 +340,7 @@ def fetch_risk_data(ticker_sym: str) -> dict:
             "market_risk": {"score": round(mkt_score, 1), "weight": "30%"},
             "leverage_risk": {"score": round(lev_score, 1), "weight": "30%"},
             "liquidity_risk": {"score": round(liq_score, 1), "weight": "20%"},
+            "earnings_quality_risk": {"score": round(eq_score, 1), "weight": "20%"},
         },
         "raw_metrics": {
             "beta": beta,

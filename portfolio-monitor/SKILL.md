@@ -1,19 +1,17 @@
+---
+name: Portfolio Monitor
+description: Portfolio analytics — computes weighted returns, correlation matrix, volatility contributions, Sharpe ratio, and concentration risk (HHI) for a set of weighted holdings. Use this when the user wants to analyze their portfolio, check diversification, understand risk attribution, or evaluate position correlations.
+---
+
 # portfolio-monitor
 
-**Stage:** 组合管理 (Portfolio Management)
-
-## Description
-
-Real-time portfolio monitoring and risk analytics. Analyzes a weighted portfolio of stocks to compute return attribution, correlation matrix, volatility contribution, and concentration risk. Helps portfolio managers understand where risk is coming from and whether positions are diversified.
-
-## Name
-
-Portfolio Monitor
+**Stage:** Portfolio Management
 
 ## Inputs
 
-- `portfolio` — Space-separated `TICKER:WEIGHT` pairs (e.g., `AAPL:30 MSFT:20 NVDA:50`)
+- `portfolio` — Space-separated `TICKER:WEIGHT` pairs (e.g., `AAPL:30 MSFT:20 NVDA:50` or `0700.HK:30 9988.HK:20 1810.HK:50`)
 - Weights can be percentages (must sum to ~100) or absolute values (auto-normalized)
+- Supports mixed US/HK portfolios. Risk-free rate auto-detected from portfolio's primary market.
 
 ## Outputs
 

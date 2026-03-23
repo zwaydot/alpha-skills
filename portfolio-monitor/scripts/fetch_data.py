@@ -9,8 +9,16 @@ Usage:
 """
 
 import sys
+import os
 import json
 from datetime import datetime, timedelta
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'lib'))
+try:
+    from market import detect_portfolio_market, get_risk_free_rate
+except ImportError:
+    def detect_portfolio_market(tickers): return "US"
+    def get_risk_free_rate(market): return 0.045
 
 try:
     import yfinance as yf
@@ -114,9 +122,9 @@ def main():
 
         for sym in tickers:
             if sym in holdings_data:
-                holdings_data[sym]["return_1m_pct"] = float(ret_1m.get(sym, float("nan"))) if sym in ret_1m else None
-                holdings_data[sym]["return_3m_pct"] = float(ret_3m.get(sym, float("nan"))) if sym in ret_3m else None
-                holdings_data[sym]["return_1y_pct"] = float(ret_1y.get(sym, float("nan"))) if sym in ret_1y else None
+                for key, ret_series in [("return_1m_pct", ret_1m), ("return_3m_pct", ret_3m), ("return_1y_pct", ret_1y)]:
+                    val = ret_series.get(sym) if sym in ret_series else None
+                    holdings_data[sym][key] = round(float(val), 2) if val is not None and not np.isnan(val) else None
 
     # Correlation matrix
     correlation_matrix = {}
@@ -146,6 +154,22 @@ def main():
             for i, sym in enumerate(available):
                 vol_contributions[sym] = round(float(contributions[i] / total_var * 100), 2) if total_var else None
 
+    # Sharpe ratio estimate (annualized, market-aware risk-free rate)
+    market = detect_portfolio_market(tickers)
+    rf_rate = get_risk_free_rate(market) * 100  # convert to percentage
+    sharpe_ratio = None
+    if not prices.empty and len(tickers) > 1 and portfolio_vol and portfolio_vol > 0:
+        try:
+            available = [t for t in tickers if t in prices.columns]
+            if available:
+                daily_returns = prices[available].pct_change().dropna()
+                w_vec = np.array([weights[t] for t in available])
+                port_daily = (daily_returns * w_vec).sum(axis=1)
+                annual_return = float(port_daily.mean() * 252 * 100)
+                sharpe_ratio = round((annual_return - rf_rate) / portfolio_vol, 2)
+        except Exception:
+            pass
+
     # Portfolio-level weighted returns
     port_ret_1m = sum(weights[t] * (holdings_data[t].get("return_1m_pct") or 0) for t in tickers)
     port_ret_3m = sum(weights[t] * (holdings_data[t].get("return_3m_pct") or 0) for t in tickers)
@@ -168,6 +192,7 @@ def main():
             "return_3m_pct": round(port_ret_3m, 2),
             "return_1y_pct": round(port_ret_1y, 2),
             "annualized_volatility_pct": portfolio_vol,
+            "sharpe_ratio": sharpe_ratio,
         },
         "correlation_matrix": correlation_matrix,
         "volatility_contributions": vol_contributions,

@@ -105,13 +105,20 @@ def fetch_events(ticker_sym: str, today: date, cutoff: date) -> list[dict]:
     try:
         ex_div = parse_date(info.get("exDividendDate"))
         if ex_div and today <= ex_div <= cutoff:
-            div_rate = info.get("dividendRate") or info.get("lastDividendValue")
+            div_rate = info.get("dividendRate")  # annual rate
+            last_div = info.get("lastDividendValue")  # per-payment amount
+            if last_div:
+                detail = f"${last_div:.4f}/share (annual: ${div_rate:.2f})" if div_rate else f"${last_div:.4f}/share"
+            elif div_rate:
+                detail = f"Annual: ${div_rate:.2f}/share"
+            else:
+                detail = "N/A"
             events.append({
                 "date": ex_div,
                 "ticker": ticker_sym.upper(),
                 "name": name,
                 "event_type": "💰 Ex-Dividend",
-                "detail": f"Div: ${div_rate:.4f}/share" if div_rate else "Div: N/A",
+                "detail": detail,
             })
     except Exception:
         pass

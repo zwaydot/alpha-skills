@@ -9,7 +9,14 @@ Usage:
 """
 
 import sys
+import os
 from datetime import datetime, timedelta
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'lib'))
+try:
+    from market import get_sector_etfs
+except ImportError:
+    get_sector_etfs = None
 
 try:
     import yfinance as yf
@@ -17,7 +24,7 @@ except ImportError:
     print("ERROR: yfinance not installed. Run: pip install yfinance")
     sys.exit(1)
 
-SECTOR_MAP = {
+SECTOR_MAP_US = {
     "XLK": "Technology",
     "XLF": "Financials",
     "XLE": "Energy",
@@ -30,7 +37,26 @@ SECTOR_MAP = {
     "XLU": "Utilities",
 }
 
-DEFAULT_ETFS = list(SECTOR_MAP.keys())
+SECTOR_MAP_HK = {
+    "3067.HK": "HK Tech (HSTECH ETF)",
+    "3033.HK": "HK Financials",
+    "3012.HK": "HK Property",
+    "2800.HK": "HK Broad Market (Tracker)",
+    "2828.HK": "China A-share ETF",
+    "3040.HK": "HK Consumer",
+}
+
+
+def get_sector_map(market: str = "US") -> dict:
+    """Return the ETF→sector mapping for a market."""
+    if get_sector_etfs:
+        return get_sector_etfs(market)
+    if market == "HK":
+        return SECTOR_MAP_HK
+    return SECTOR_MAP_US
+
+
+DEFAULT_ETFS = list(SECTOR_MAP_US.keys())
 
 
 def get_return(hist, days: int) -> float | None:
@@ -69,16 +95,30 @@ def cycle_signal(score: float, pe: float | None) -> str:
 
 
 def main():
-    etfs = [e.upper() for e in sys.argv[1:]] if len(sys.argv) > 1 else DEFAULT_ETFS
+    import argparse
+    parser = argparse.ArgumentParser(description="Sector rotation scanner")
+    parser.add_argument("etfs", nargs="*", help="ETF tickers to scan")
+    parser.add_argument("--market", choices=["US", "HK"], default="US",
+                        help="Market to scan (default: US)")
+    args = parser.parse_args()
+
+    sector_map = get_sector_map(args.market)
+
+    if args.etfs:
+        etfs = [e.upper() for e in args.etfs]
+    else:
+        etfs = list(sector_map.keys())
+
     today = datetime.now()
     start = today - timedelta(days=400)
 
-    print(f"# Sector Radar Report", flush=True)
+    market_label = "US" if args.market == "US" else "Hong Kong"
+    print(f"# Sector Radar Report — {market_label}", flush=True)
     print(f"\n_Generated: {today.strftime('%Y-%m-%d %H:%M')} UTC_\n")
 
     results = []
     for sym in etfs:
-        sector = SECTOR_MAP.get(sym, sym)
+        sector = sector_map.get(sym, sym)
         try:
             t = yf.Ticker(sym)
             hist = t.history(start=start.strftime("%Y-%m-%d"))

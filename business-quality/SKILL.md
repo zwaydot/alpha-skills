@@ -1,18 +1,15 @@
+---
+name: Business Quality
+description: Moat assessment and business quality scorecard. Evaluates competitive advantages via 5-year ROE, ROIC, gross margin, and net margin trends. Use this when the user asks about a company's moat, business quality, profitability trends, competitive advantages, or wants to assess whether a company has durable earnings power.
+---
+
 # business-quality
 
-**Stage:** 深度研究 (Deep Research)
-
-## Description
-
-Moat assessment and business quality scorecard. Evaluates a company's competitive advantages by analyzing multi-year trends in profitability metrics. Outputs a structured scorecard rating the durability and quality of the business model.
-
-## Name
-
-Business Quality Assessment
+**Stage:** Deep Research
 
 ## Inputs
 
-- `ticker` — Single stock ticker symbol (e.g., `AAPL`)
+- `ticker` — Stock ticker symbol (e.g., `AAPL`, `0700.HK`, `9988.HK`). Supports US and HK markets. Tax rate for ROIC calculation is auto-detected by market.
 - `years` — Historical lookback in years (default: 5)
 
 ## Outputs

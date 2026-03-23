@@ -1,18 +1,15 @@
+---
+name: Risk Framework
+description: Systematic risk scoring across market risk, financial leverage, liquidity, and earnings quality dimensions. Outputs a risk scorecard (0-100) with position sizing guidance. Use this when the user asks about risk assessment, position sizing, financial health, leverage concerns, or wants to evaluate how risky a stock is before buying.
+---
+
 # risk-framework
 
-**Stage:** 风险管理 (Risk Management)
-
-## Description
-
-Systematic risk scoring framework. Evaluates a company across market risk, financial risk, and liquidity risk dimensions. Outputs a structured risk scorecard to help position sizing and portfolio risk management decisions.
-
-## Name
-
-Risk Framework
+**Stage:** Risk Management
 
 ## Inputs
 
-- `ticker` — Single stock ticker symbol (e.g., `AAPL`)
+- `ticker` — Stock ticker symbol (e.g., `AAPL`, `0700.HK`). Supports US and HK markets.
 
 ## Outputs
 

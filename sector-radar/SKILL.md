@@ -1,13 +1,15 @@
+---
+name: Sector Radar
+description: Sector rotation and industry cycle scanner. Ranks 10 SPDR sector ETFs by momentum, valuation, and relative strength to identify which industries are in an upswing or undervalued. Use this when the user asks about sector rotation, industry momentum, which sectors are hot/cold, or wants to compare sectors.
+---
+
 # sector-radar
 
-**Stage:** 找标的 (Idea Generation)
-
-## Description
-
-Sector rotation and industry cycle scanner. Analyzes major sector ETFs to identify which industries are in an upswing or undervalued, helping allocate capital to the right sectors at the right time.
+**Stage:** Idea Generation
 
 ## Tracked Sectors
 
+### US (default)
 | ETF | Sector |
 |-----|--------|
 | XLK | Technology |
@@ -21,10 +23,20 @@ Sector rotation and industry cycle scanner. Analyzes major sector ETFs to identi
 | XLRE | Real Estate |
 | XLU | Utilities |
 
+### HK (Hong Kong)
+| ETF | Sector |
+|-----|--------|
+| 3067.HK | HK Tech (HSTECH ETF) |
+| 3033.HK | HK Financials |
+| 3012.HK | HK Property |
+| 2800.HK | HK Broad Market (Tracker Fund) |
+| 2828.HK | China A-share ETF |
+| 3040.HK | HK Consumer |
+
 ## Inputs
 
-- `etfs` — List of sector ETF tickers (default: all 10 SPDR sector ETFs)
-- `lookback_days` — Performance lookback window in days (default: 30)
+- `etfs` — List of sector ETF tickers (default: all 10 US SPDR sector ETFs)
+- `--market` — Market to scan: `US` (default) or `HK`
 
 ## Outputs
 
@@ -44,8 +56,11 @@ Markdown report containing:
 ## Script Usage
 
 ```bash
-# Run full sector scan (default: all 10 sectors)
+# Run full US sector scan (default: all 10 sectors)
 python3 scripts/fetch_data.py
+
+# Hong Kong market sectors
+python3 scripts/fetch_data.py --market HK
 
 # Custom ETF list
 python3 scripts/fetch_data.py XLK XLF XLE XLV
@@ -76,6 +91,6 @@ Show me a sector heat map with momentum and valuation for the past month
 - 6M return: 25% weight
 
 **Cycle Assessment:**
-- Bullish: Score > 65 AND P/E below historical median
-- Bearish: Score < 35 OR P/E > 25
+- Bullish: Score > 65 AND P/E < 22
+- Bearish: Score < 35 OR P/E > 28
 - Neutral: Everything else

@@ -84,8 +84,14 @@ def fetch_company_data(ticker_sym: str) -> dict:
     gm_vals = [annual[y]["gross_margin_pct"] for y in sorted_years if annual[y].get("gross_margin_pct") is not None]
     nm_vals = [annual[y]["net_margin_pct"] for y in sorted_years if annual[y].get("net_margin_pct") is not None]
 
-    gm_trend = "improving" if len(gm_vals) >= 2 and gm_vals[-1] > gm_vals[0] else "declining" if len(gm_vals) >= 2 else "unknown"
-    nm_trend = "improving" if len(nm_vals) >= 2 and nm_vals[-1] > nm_vals[0] else "declining" if len(nm_vals) >= 2 else "unknown"
+    if len(gm_vals) >= 2:
+        gm_trend = "improving" if gm_vals[-1] > gm_vals[0] else "stable" if gm_vals[-1] == gm_vals[0] else "declining"
+    else:
+        gm_trend = "unknown"
+    if len(nm_vals) >= 2:
+        nm_trend = "improving" if nm_vals[-1] > nm_vals[0] else "stable" if nm_vals[-1] == nm_vals[0] else "declining"
+    else:
+        nm_trend = "unknown"
 
     avg_gross_margin = round(sum(gm_vals) / len(gm_vals), 2) if gm_vals else None
     avg_net_margin = round(sum(nm_vals) / len(nm_vals), 2) if nm_vals else None
