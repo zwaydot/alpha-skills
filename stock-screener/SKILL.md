@@ -1,78 +1,65 @@
-# stock-screener
+---
+name: Stock Screener
+description: Multi-factor stock screening across any universe — S&P 500, Nasdaq 100, sector ETFs, or custom ticker lists. Filters by valuation, profitability, and growth to surface investment candidates.
+---
 
-**Stage:** 找标的 (Idea Generation)
+# Stock Screener
 
-## Description
-
-Multi-factor quantitative screener to find candidate stocks that meet buy-side quality thresholds. Filters the market for companies with attractive valuations, strong profitability, and growth momentum.
-
-## Default Screening Criteria
-
-| Factor | Threshold |
-|--------|-----------|
-| P/E Ratio | < 20 |
-| ROE | > 15% |
-| Revenue Growth (YoY) | > 10% |
-| Market Cap | > $1B |
+Multi-factor screening to find stocks that meet quality and value criteria. Supports any universe — not limited to S&P 500.
 
 ## Inputs
 
-- `tickers` — List of ticker symbols to screen (or use a predefined universe)
-- `pe_max` — Maximum P/E ratio (default: 20)
-- `roe_min` — Minimum ROE % (default: 15)
-- `revenue_growth_min` — Minimum revenue growth % (default: 10)
-- `market_cap_min` — Minimum market cap in USD billions (default: 1)
+- **Universe** (choose one):
+  - Index: `sp500` / `nasdaq100` / `russell2000`
+  - Sector ETF: `XLK`, `XLF`, `XLE`, `XLV`, `XLI`, `XLY`, `XLP`, `XLB`, `XLRE`, `XLU`
+  - Custom list: any set of tickers
+- **Filters** (optional, with defaults):
+  - Max P/E ratio (default: 20)
+  - Min ROE % (default: 15%)
+  - Min market cap in $B (default: $1B)
 
 ## Outputs
 
-CSV file containing:
-- `ticker` — Stock symbol
-- `name` — Company name
-- `market_cap` — Market capitalization (USD)
-- `pe_ratio` — Trailing P/E ratio
-- `roe` — Return on equity (%)
-- `revenue_growth` — YoY revenue growth (%)
-- `score` — Composite score (0–100)
+- CSV with: ticker, company name, sector, price, market cap, P/E, ROE, revenue growth, score
+- Top candidates ranked by composite score
 
 ## Data Sources
 
-- **yfinance** — Real-time and historical financial data
-- Financials pulled from `ticker.info`, `ticker.financials`, `ticker.balance_sheet`
+- `yfinance` — real-time fundamentals, no API key required
+- Wikipedia — S&P 500 / Nasdaq 100 constituent lists
 
 ## Script Usage
 
 ```bash
-# Screen a custom list of tickers
-python3 scripts/fetch_data.py AAPL MSFT GOOGL NVDA META TSLA AMZN
-
-# Use default S&P 100 universe (no args)
+# S&P 500 (default)
 python3 scripts/fetch_data.py
 
-# Override thresholds via env vars
-PE_MAX=15 ROE_MIN=20 python3 scripts/fetch_data.py AAPL MSFT NVDA
-```
+# Nasdaq 100
+python3 scripts/fetch_data.py --index nasdaq100
 
-Output saved to `screener_results.csv` in the current directory.
+# Tech sector only
+python3 scripts/fetch_data.py --sector XLK
+
+# Custom ticker list
+python3 scripts/fetch_data.py --tickers AAPL MSFT NVDA GOOGL META AMZN
+
+# Looser filters (higher P/E, lower ROE)
+python3 scripts/fetch_data.py --index sp500 --pe 30 --roe 10 --mcap 5
+
+# Save to specific file
+python3 scripts/fetch_data.py --output my_candidates.csv
+```
 
 ## Example Prompts
 
 ```
-Run the stock screener on the top 50 S&P 500 names and show me candidates with P/E under 20 and ROE above 15%
+Run the stock screener on the Nasdaq 100 and show me the top quality candidates
 ```
 
 ```
-Screen these tickers for quality: AAPL, MSFT, GOOGL, NVDA, META, TSLA, AMZN, JPM, V, MA
+Screen the tech sector (XLK) for stocks with P/E under 25 and ROE above 20%
 ```
 
 ```
-Find undervalued large-cap tech stocks with strong ROE and revenue growth
+Evaluate these 10 stocks against my quality criteria: AAPL MSFT NVDA TSLA META AMZN GOOGL V MA JPM
 ```
-
-## Scoring Logic
-
-The composite score weights:
-- **Valuation (30%)** — Lower P/E = higher score
-- **Profitability (40%)** — Higher ROE = higher score
-- **Growth (30%)** — Higher revenue growth = higher score
-
-Scores normalized 0–100. Stocks passing all filters sorted by score descending.
