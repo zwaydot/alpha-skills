@@ -1,5 +1,5 @@
 ---
-name: Valuation Matrix
+name: valuation-matrix
 description: Multi-method valuation framework with sector-aware multiples. Triangulates intrinsic value using FCF yield, EV/EBITDA, P/E (with industry-appropriate ranges), and analyst consensus targets. Use this when the user asks about fair value, intrinsic value, whether a stock is overvalued/undervalued, or wants bear/base/bull price targets.
 ---
 

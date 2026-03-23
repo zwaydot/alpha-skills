@@ -1,5 +1,5 @@
 ---
-name: Competitive Dynamics
+name: competitive-dynamics
 description: Competitive landscape analysis — compares a target company against peers on revenue growth CAGR, margin trends, and R&D intensity over 3 years. Use this when the user asks about competitive positioning, market share dynamics, peer comparison, or wants to know who is gaining/losing ground in an industry.
 ---
 

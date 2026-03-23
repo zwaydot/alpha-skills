@@ -1,5 +1,5 @@
 ---
-name: Business Quality
+name: business-quality
 description: Moat assessment and business quality scorecard. Evaluates competitive advantages via 5-year ROE, ROIC, gross margin, and net margin trends. Use this when the user asks about a company's moat, business quality, profitability trends, competitive advantages, or wants to assess whether a company has durable earnings power.
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: Stock Screener
+name: stock-screener
 description: Multi-factor stock screening with server-side filtering — finds stocks by sector, industry, valuation, and profitability across US, HK, and other markets. Use this when the user asks to screen stocks, find investment candidates, filter by sector/industry, compare stocks on quality metrics, or scan a market for opportunities. Works with Yahoo Finance (yfinance) by default, but the methodology adapts to any market data API (FMP, Longbridge, Alpaca, etc.).
 ---
 

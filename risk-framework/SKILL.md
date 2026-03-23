@@ -1,5 +1,5 @@
 ---
-name: Risk Framework
+name: risk-framework
 description: Systematic risk scoring across market risk, financial leverage, liquidity, and earnings quality dimensions. Outputs a risk scorecard (0-100) with position sizing guidance. Use this when the user asks about risk assessment, position sizing, financial health, leverage concerns, or wants to evaluate how risky a stock is before buying.
 ---
 

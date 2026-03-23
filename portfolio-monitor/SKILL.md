@@ -1,5 +1,5 @@
 ---
-name: Portfolio Monitor
+name: portfolio-monitor
 description: Portfolio analytics — computes weighted returns, correlation matrix, volatility contributions, Sharpe ratio, and concentration risk (HHI) for a set of weighted holdings. Use this when the user wants to analyze their portfolio, check diversification, understand risk attribution, or evaluate position correlations.
 ---
 

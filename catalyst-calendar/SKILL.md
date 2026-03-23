@@ -1,5 +1,5 @@
 ---
-name: Catalyst Calendar
+name: catalyst-calendar
 description: 90-day event calendar aggregating upcoming earnings dates and ex-dividend dates from Yahoo Finance. Use this when the user asks about upcoming earnings, dividend dates, corporate events, catalysts, or wants to plan trade timing around key dates for specific tickers.
 ---
 

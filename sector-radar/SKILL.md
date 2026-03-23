@@ -1,5 +1,5 @@
 ---
-name: Sector Radar
+name: sector-radar
 description: Sector rotation and industry cycle scanner. Ranks 10 SPDR sector ETFs by momentum, valuation, and relative strength to identify which industries are in an upswing or undervalued. Use this when the user asks about sector rotation, industry momentum, which sectors are hot/cold, or wants to compare sectors.
 ---
 
