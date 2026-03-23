@@ -1,11 +1,63 @@
 ---
-name: initiating-coverage
+name: Initiating coverage research
 description: Conduct comprehensive company research for initiating coverage, including business model analysis, competitive positioning, financial performance review, and valuation. Produces thorough research reports with investment recommendations. Use for equity research initiations, investment committee memos, and strategic assessments.
 ---
 
 # Initiating Coverage Research
 
 Create comprehensive initiation reports for new coverage.
+
+## Inputs
+
+- **Ticker symbol**: The company to initiate coverage on (e.g. `AAPL`, `TSLA`, `NVDA`)
+- **Investment recommendation**: Buy / Hold / Sell with price target
+- **Coverage scope**: Full initiation (20-40 pages) or summary memo (5-8 pages)
+- **Comparable peers**: For valuation benchmarking
+- **Years of history**: For financial analysis (default: 3 price history, 5 financial history)
+
+## Outputs
+
+- **JSON data pack**: `<TICKER>_coverage_data_YYYYMMDD.json` — all research inputs
+- **Initiation Report** (PDF/Word, 20-40 pages)
+- **Financial Model** (Excel)
+- **Valuation Summary** (Football field)
+
+## Data Sources
+
+- **Yahoo Finance** (via `yfinance`): Business overview, financials, price history, analyst consensus, management data
+- **SEC EDGAR**: 10-K/10-Q for detailed financials and risk factors
+- **Web research**: Industry reports, news, competitive landscape
+
+## Example Usage
+
+```
+"Initiate coverage on Tesla with a $250 price target — Overweight"
+"Write a coverage initiation memo for NVIDIA"
+"Start coverage on BYD (hk01211) with a Buy rating"
+```
+
+## Quick Start: Fetch Coverage Data
+
+```bash
+# Fetch comprehensive data for coverage initiation
+python3 scripts/fetch_data.py AAPL
+
+# Customize history periods
+python3 scripts/fetch_data.py TSLA --history-years 3 --financial-years 5
+
+# Save to named output
+python3 scripts/fetch_data.py NVDA --output nvda_coverage.json
+```
+
+**Script output includes:**
+- Company overview (business description, sector, employees, website)
+- Financial summary (market cap, EV, revenue, EBITDA, margins, FCF)
+- Valuation multiples (P/E, EV/EBITDA, EV/Revenue, P/S, PEG)
+- Returns and growth metrics (ROE, ROA, revenue growth, earnings growth)
+- 3-year price history with monthly prices, total return, YTD, volatility
+- Analyst consensus (rating, price target, upside, # of analysts)
+- Recent analyst upgrades/downgrades
+- 5-year historical income statement and cash flow
 
 ## Overview
 
@@ -74,21 +126,17 @@ This Skill produces:
 
 ## Workflow
 
-### Step 1: Research & Data Collection
+### Step 1: Fetch Research Data
 
 ```bash
-# Gather all source materials
-python3 ~/.openclaw/workspace/skills/financial-services/initiating-coverage/scripts/research_prep.py \
-  --ticker AAPL \
-  --output "research_data.json"
+python3 scripts/fetch_data.py AAPL --history-years 3 --financial-years 5
 ```
 
 Collect:
-- **SEC Filings**: 10-K, 10-Q, Proxy statements
-- **Earnings**: Transcripts, Presentations
-- **Industry**: Research reports, News
-- **Competitors**: Peer financials
-- **Management**: Backgrounds, Track record
+- **Business overview**: Description, sector, employees, website
+- **Financial summary**: All key metrics in one JSON
+- **Price history**: 3-year monthly price data + stats
+- **Analyst data**: Consensus rating, price targets, recent changes
 
 ### Step 2: Business Model Analysis
 
@@ -128,36 +176,28 @@ Generate structured document with:
 - Charts and tables
 - Professional formatting
 
-## Output Format
-
-**PDF/Word Report** (20-40 pages):
-- Title page with stock info
-- Table of contents
-- Section headers
-- Page numbers
-- Professional styling
-
 ## Usage Examples
 
 ### Example 1: Tech Coverage Initiation
 
 ```
-User: "Initiate coverage on Tesla with $250 PT"
+User: "Initiate coverage on Tesla with $250 PT — Overweight"
 
-Process:
-1. Research: 10-Ks, earnings calls, competitor analysis
-2. Model: 5-year financial projections
-3. Valuation: DCF + Comps → $250 PT
-4. Rating: Overweight (bullish on EV adoption)
-5. Risks: Competition, execution, valuation
+Step 1: python3 scripts/fetch_data.py TSLA --history-years 3
+Step 2: Review tesla_coverage_data_*.json
+Step 3: Claude writes 35-page report
 
-Output: 35-page initiation report
+Sections:
+1. Investment thesis: EV market leadership + energy business optionality
+2. Financial model: 5-year projections
+3. Valuation: DCF $220 + Comps $280 → PT $250
+4. Risks: Competition, execution, valuation
 ```
 
 ### Example 2: Chinese Company Initiation
 
 ```
-User: "Initiate on 比亚迪 (BYD)"
+User: "Initiate on BYD"
 
 Focus areas:
 - EV market leadership in China
@@ -167,6 +207,20 @@ Focus areas:
 - Valuation vs. growth
 
 Output: Bilingual initiation report
+```
+
+### Example 3: Quick Coverage Memo
+
+```
+User: "Write a 5-page coverage memo on Nvidia"
+
+python3 scripts/fetch_data.py NVDA
+
+Output:
+- 1-page thesis: AI infrastructure supercycle
+- Financial highlights + growth trajectory
+- Valuation: Premium justified by moat
+- Rating: Overweight / $900 PT
 ```
 
 ## Best Practices
@@ -179,11 +233,11 @@ Output: Bilingual initiation report
 
 ## Key Outputs
 
-1. **Initiation Report** (PDF/Word)
-2. **Financial Model** (Excel)
-3. **Valuation Summary**
-4. **Investment Committee Presentation**
-5. **Catalyst Calendar**
+1. **Coverage Data Pack JSON** (from script)
+2. **Initiation Report** (PDF/Word)
+3. **Financial Model** (Excel)
+4. **Valuation Summary**
+5. **Investment Committee Presentation**
 
 ## Related Skills
 

@@ -1,18 +1,64 @@
 ---
-name: earnings-analysis
+name: Earnings Analysis
 description: Create professional equity research earnings update reports analyzing quarterly results for companies under coverage. Includes beat/miss analysis, guidance review, updated estimates, and thesis impact assessment. Use for equity research, investor communications, and portfolio monitoring.
 ---
 
 # Earnings Analysis
 
-Create professional earnings update reports.
+Create professional earnings update reports for companies under coverage.
+
+## Inputs
+
+- **Ticker symbol**: The company to analyze (e.g. `AAPL`, `TSLA`)
+- **Quarter**: Quarter being reported (e.g. Q1 2026) — for labeling
+- **Actual results**: Revenue and EPS (if script data is insufficient)
+- **Guidance**: Management's forward outlook (from earnings call/release)
+- **Prior estimates**: Consensus or internal model estimates
+
+## Outputs
+
+- **JSON file**: `<TICKER>_earnings_YYYYMMDD.json` — structured earnings data
+- **Earnings Update Report** (Word/PDF, 8–12 pages)
+- **Updated financial model estimates** (Excel)
+- **Beat/miss table**: Actuals vs. consensus
+
+## Data Sources
+
+- **Yahoo Finance** (via `yfinance`): EPS history, quarterly financials, forward estimates, analyst consensus
+- **User-provided**: Management guidance, earnings call transcript, press release
+
+## Example Usage
+
+```
+"Write an earnings update for Apple Q1 2026"
+"Did Tesla beat or miss last quarter? Pull the data and summarize"
+"Update my Apple model — they just reported: EPS $2.18 vs $2.10 est, Revenue $95.2B vs $93.5B est"
+```
+
+## Quick Start: Fetch Earnings Data
+
+```bash
+# Fetch comprehensive earnings data for a ticker
+python3 scripts/fetch_data.py AAPL
+
+# Save to a named file
+python3 scripts/fetch_data.py TSLA --output tsla_q1_earnings.json
+```
+
+**Script output includes:**
+- EPS actual vs. estimate for last 8 quarters (beat/miss history)
+- Quarterly revenue, gross profit, net income, FCF
+- YoY comparisons for most recent quarter
+- Forward EPS and revenue estimates (analyst consensus)
+- Analyst rating, target price, number of analysts
+- Current valuation snapshot (P/E trailing/forward, EV/EBITDA)
 
 ## Overview
 
 This Skill generates:
 - Quarterly earnings summaries
 - Beat/miss analysis vs. consensus
-- Guidance and management commentary
+- Guidance and management commentary review
 - Updated financial estimates
 - Investment thesis impact
 
@@ -25,26 +71,22 @@ This Skill generates:
 4. **Guidance & Commentary** (1 page)
 5. **Estimate Changes** (1 page)
 6. **Valuation Update** (1 page)
-7. **Investment Thesis** (1 page)
+7. **Investment Thesis Impact** (1 page)
 8. **Appendix** (Charts, tables)
 
 ## Workflow
 
-### Step 1: Data Collection
+### Step 1: Fetch Earnings Data
 
 ```bash
-# Fetch earnings data
-python3 ~/.openclaw/workspace/skills/financial-services/earnings-analysis/scripts/fetch_earnings.py \
-  --ticker AAPL \
-  --quarter Q1-2026
+python3 scripts/fetch_data.py AAPL
 ```
 
-Collect:
-- **Actual results**: Revenue, EPS, margins
-- **Consensus estimates**: Bloomberg, FactSet
-- **Prior year**: YoY comparison
-- **Guidance**: Management outlook
-- **Call transcript**: Key commentary
+This retrieves:
+- Historical EPS beats/misses
+- Quarterly income statement + cash flow data
+- Analyst consensus estimates (forward EPS, revenue)
+- Current analyst rating and price target
 
 ### Step 2: Beat/Miss Analysis
 
@@ -78,7 +120,6 @@ Revise forward estimates:
 - **Revenue**: FY2026, FY2027
 - **EBITDA**: Operating leverage
 - **EPS**: Tax rate, share count
-- **Key metrics**: Unit sales, ARPU
 
 ### Step 6: Valuation & Thesis
 
@@ -88,14 +129,6 @@ Update:
 - **Key risks**: What's changed?
 - **Catalysts**: Upcoming events
 
-## Output Format
-
-**Word/PDF Report** with:
-- Professional formatting
-- Charts and tables
-- Executive summary bullets
-- Consistent branding
-
 ## Usage Examples
 
 ### Example 1: Tech Earnings
@@ -103,28 +136,27 @@ Update:
 ```
 User: "Write earnings update for Apple Q1 2026"
 
-Inputs:
-- Actual EPS: $2.18 vs. $2.10 est (+3.8% beat)
+Step 1: python3 scripts/fetch_data.py AAPL
+
+Then provide guidance data:
+- EPS actual: $2.18 vs. $2.10 est (+3.8% beat)
 - Revenue: $95.2B vs. $93.5B (+1.8% beat)
 - iPhone: $52B (+2% YoY)
 - Services: $24B (+15% YoY)
-- Guidance: Revenue "up low single digits"
+- Q2 guidance: Revenue "up low single digits"
 
 Output: 10-page earnings report with updated estimates
 ```
 
-### Example 2: Chinese Company
+### Example 2: Quick Beat/Miss Summary
 
 ```
-User: "Earnings summary for 宁德时代 Q4"
+User: "Did Nvidia beat last quarter?"
 
-Data:
-- Revenue, profit vs. expectations
-- Battery volume, ASP trends
-- Capacity expansion plans
-- EV market outlook
-
-Output: Chinese/English bilingual report
+python3 scripts/fetch_data.py NVDA
+→ Shows last 4 quarters of EPS actuals vs. estimates
+→ Revenue beat/miss with % surprises
+→ Analyst consensus and price targets
 ```
 
 ## Best Practices
@@ -137,9 +169,9 @@ Output: Chinese/English bilingual report
 
 ## Key Outputs
 
-1. **Earnings Update Report** (Word/PDF)
-2. **Financial Model Update** (Excel)
-3. **Consensus Comparison** (Table)
+1. **Earnings Data JSON** (from script)
+2. **Earnings Update Report** (Word/PDF)
+3. **Consensus Comparison Table**
 4. **Updated Price Target**
 5. **Catalyst Calendar**
 

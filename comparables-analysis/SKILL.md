@@ -1,11 +1,61 @@
 ---
-name: comparables-analysis
+name: Comps analysis with public/private peers
 description: Generate peer benchmarking tables with valuation multiples (EV/Revenue, EV/EBITDA, P/E, P/B) and operating metrics that auto-refresh with live data. Supports both public company trading comps and private company transaction comps. Use for valuation, M&A screening, and competitive positioning analysis.
 ---
 
-# Comparables Analysis
+# Comps Analysis with Public/Private Peers
 
-Create comprehensive comparative analysis between target company and selected peers.
+Create comprehensive comparative analysis between a target company and selected peers.
+
+## Inputs
+
+- **Target company**: Ticker symbol or company name (e.g. `AAPL`, `Tesla`)
+- **Peer list**: 4–10 comparable company tickers (e.g. `MSFT GOOGL META AMZN`)
+- **Comps type**: Trading comps (public) or transaction comps (M&A)
+- **Market**: US (default), China A-shares (`sh`/`sz` prefix), Hong Kong (`hk` prefix)
+- **Optional**: Custom metric weights, outlier exclusion criteria
+
+## Outputs
+
+- **CSV file**: `comps_YYYYMMDD_HHMM.csv` — all peers with key metrics
+- **Markdown table**: Formatted comparison with valuation multiples
+- **Implied valuation range**: Median/mean multiple applied to target
+
+## Data Sources
+
+- **Yahoo Finance** (via `yfinance`): US & international public companies
+- **SEC EDGAR**: For deeper financial detail on US companies
+- **User-provided**: Private company financials, transaction databases
+
+## Example Usage
+
+```
+"Run trading comps for Tesla vs. EV peers: RIVN, NIO, XPEV"
+"Compare Apple to FAANG peers on EV/Revenue and P/E"
+"Build a SaaS comps table for a $500M ARR company"
+```
+
+## Quick Start: Fetch Live Data
+
+```bash
+# Fetch valuation multiples for a peer group
+python3 scripts/fetch_data.py AAPL MSFT GOOGL META AMZN
+
+# Save to a named CSV
+python3 scripts/fetch_data.py TSLA RIVN LCID NIO XPEV --output ev_comps.csv
+
+# Also export JSON
+python3 scripts/fetch_data.py AAPL MSFT GOOGL --json
+```
+
+**Output fields per company:**
+- Market Cap, Enterprise Value
+- Revenue TTM, EBITDA TTM
+- Trailing P/E, Forward P/E, P/B
+- EV/Revenue, EV/EBITDA
+- Gross Margin, Operating Margin, Net Margin
+- Revenue Growth YoY, Earnings Growth YoY
+- ROE, ROA, Debt/Equity, Free Cash Flow
 
 ## Overview
 
@@ -14,13 +64,6 @@ This Skill generates:
 - Transaction comparables (M&A deals)
 - Operating metrics benchmarking
 - Valuation multiple analysis
-
-## Data Sources
-
-- **Yahoo Finance**: US/international public companies
-- **Tencent Finance**: A-shares, Hong Kong stocks
-- **User data**: Private company financials, transaction databases
-- **Manual input**: For non-public peers
 
 ## Supported Markets
 
@@ -41,15 +84,10 @@ Identify comparable companies based on:
 - **Business model**: Similar revenue streams
 - **Geography**: Regional vs. global players
 
-### Step 2: Data Extraction
+### Step 2: Fetch Live Data
 
 ```bash
-# Fetch peer data
-python3 ~/.openclaw/workspace/skills/financial-services/comparables-analysis/scripts/fetch_peers.py \
-  --target AAPL \
-  --peers MSFT,GOOGL,META,AMZN
-
-# Output: peers_data.json
+python3 scripts/fetch_data.py AAPL MSFT GOOGL META AMZN --output tech_comps.csv
 ```
 
 ### Step 3: Calculate Multiples
@@ -70,21 +108,19 @@ python3 ~/.openclaw/workspace/skills/financial-services/comparables-analysis/scr
 
 ### Step 4: Generate Output
 
-Create Excel output with:
+Create output with:
 - **Summary table**: All peers with key metrics
-- **Multiple comparison**: Charts showing valuation ranges
+- **Multiple comparison**: Valuation ranges
 - **Operating metrics**: Efficiency and profitability comparison
 - **Implied valuation**: Apply median/multiple to target
 
 ## Output Format
 
-**Excel File** with multiple sheets:
-
+**CSV + Markdown Table** with:
 1. **Summary**: Target + Peers key data
 2. **Trading Multiples**: EV/Revenue, EV/EBITDA, P/E comparison
 3. **Operating Metrics**: Margins, growth, returns
 4. **Implied Valuation**: Range based on peer multiples
-5. **Notes**: Peer selection rationale
 
 ## Usage Examples
 
@@ -93,9 +129,7 @@ Create Excel output with:
 ```
 User: "Run trading comps for Tesla vs EV peers"
 
-Target: TSLA
-Peers: RIVN, LCID, NIO, XPEV, BYD (hk01211)
-Multiples: EV/Revenue, EV/EBITDA, P/S
+python3 scripts/fetch_data.py TSLA RIVN LCID NIO XPEV --output ev_comps.csv
 
 Output:
 - Median EV/Revenue: 3.2x
@@ -103,16 +137,14 @@ Output:
 - Implied price range: $180-$280
 ```
 
-### Example 2: Chinese bank comps
+### Example 2: Large-cap tech comps
 
 ```
-User: "Compare ICBC with other major Chinese banks"
+User: "Compare Apple to mega-cap tech"
 
-Target: 工商银行 (sh601398)
-Peers: 建设银行(sh601939), 农业银行(sh601288), 招商银行(sh600036)
-Metrics: P/B, P/E, NIM, NPL ratio, ROE
+python3 scripts/fetch_data.py AAPL MSFT GOOGL META AMZN NVDA
 
-Output: Banking sector comps table
+Output: Tech sector comps table with valuations and margins
 ```
 
 ### Example 3: M&A Transaction comps
@@ -120,12 +152,9 @@ Output: Banking sector comps table
 ```
 User: "Find precedent transactions in SaaS space last 2 years"
 
-Filter: 
-- Target: SaaS companies
-- Deal size: $500M-$5B
-- Date: 2023-2025
-
-Output: Transaction multiples (EV/Revenue, EV/ARR)
+→ Claude analyzes deal databases and structures output:
+- Target: SaaS companies, $500M-$5B deal size
+- Transaction multiples (EV/Revenue, EV/ARR)
 ```
 
 ## Best Practices
@@ -138,7 +167,7 @@ Output: Transaction multiples (EV/Revenue, EV/ARR)
 
 ## Key Outputs
 
-1. **Peer Comparison Table** (Excel)
+1. **Peer Comparison CSV** — all metrics per company
 2. **Valuation Multiple Ranges** (Min, Max, Median, Mean)
 3. **Operating Metrics Benchmark**
 4. **Implied Valuation Range**

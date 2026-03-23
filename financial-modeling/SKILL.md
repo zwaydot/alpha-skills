@@ -1,41 +1,87 @@
 ---
-name: financial-modeling
+name: Integrated Three-Statement Financial Modeling
 description: Build integrated three-statement financial models (income statement, balance sheet, cash flow statement) from sellside models, SEC filings, or company reports. Creates proper linkages across all statements with scenario analysis, valuation modules, and sensitivity tables. Use for company valuation, M&A analysis, investment research, and credit analysis.
 ---
 
-# 3-Statement Financial Modeling
+# Integrated Three-Statement Financial Modeling
 
 Build integrated three-statement financial models with proper accounting linkages.
+
+## Inputs
+
+- **Ticker symbol**: For automated data fetching (e.g. `AAPL`, `MSFT`)
+- **Period type**: Annual (default) or quarterly
+- **Years of history**: 3–5 years (default: 5)
+- **Scenario assumptions**: Revenue growth rates, margin targets, CapEx %
+- **Optional**: User-provided Excel model or CSV to override fetched data
+
+## Outputs
+
+- **JSON file**: `<TICKER>_3statement_annual_YYYYMMDD.json` — all three statements + ratios
+- **Excel Model**: Income statement, balance sheet, cash flow with proper linkages
+- **Ratio summary**: Margins, returns, leverage, coverage ratios per year
+
+## Data Sources
+
+- **Yahoo Finance** (via `yfinance`): Annual and quarterly financial statements
+- **SEC EDGAR**: 10-K/10-Q filings for US companies (deeper detail)
+- **User-provided**: Sellside models, company IR presentations, CSV exports
+
+## Example Usage
+
+```
+"Build a three-statement model for Apple"
+"Model Tesla's financials for the last 5 years — annual"
+"Create projections for NVDA with 25% revenue growth and 55% gross margins"
+```
+
+## Quick Start: Fetch Historical Data
+
+```bash
+# Fetch 5-year annual financial statements (default)
+python3 scripts/fetch_data.py AAPL
+
+# Fetch quarterly data
+python3 scripts/fetch_data.py AAPL --quarterly
+
+# Specify years
+python3 scripts/fetch_data.py MSFT --years 7 --output msft_3statement.json
+
+# Both annual and quarterly
+python3 scripts/fetch_data.py NVDA --output nvda_annual.json
+python3 scripts/fetch_data.py NVDA --quarterly --output nvda_quarterly.json
+```
+
+**Script output includes:**
+- Full income statement (revenue → net income) per year
+- Full balance sheet (assets, liabilities, equity) per year
+- Full cash flow statement (operating, investing, financing) per year
+- Pre-computed ratios: margins, ROE, ROA, CapEx %, leverage
+- Historical revenue CAGR
+- Model building notes (linkages and checks to implement)
 
 ## Overview
 
 This Skill creates comprehensive three-statement financial models by:
-1. Extracting historical financial data from filings or reports
+1. Extracting historical financial data from filings or yfinance
 2. Building forecast drivers and assumptions
 3. Creating integrated income statement, balance sheet, and cash flow statement
 4. Adding valuation modules and sensitivity analysis
 
-## Data Sources
-
-- **SEC Filings**: 10-K, 10-Q from EDGAR (US companies)
-- **Company Reports**: Annual reports, investor presentations
-- **Third-party data**: Yahoo Finance, tencent-finance (for A-shares/HK)
-- **User-provided**: Excel models, CSV data exports
-
 ## Workflow
 
-### Step 1: Data Collection
+### Step 1: Fetch Historical Data
 
 ```bash
-# For US stocks
-python3 ~/.openclaw/workspace/skills/financial-services/financial-modeling/scripts/fetch_sec.py <ticker>
-
-# For A-shares
-python3 ~/.openclaw/workspace/skills/financial-services/financial-modeling/scripts/fetch_cn.py <stock_code>
-
-# For HK stocks
-python3 ~/.openclaw/workspace/skills/financial-services/financial-modeling/scripts/fetch_hk.py <stock_code>
+python3 scripts/fetch_data.py AAPL --years 5
 ```
+
+Review the output JSON for:
+- Revenue trend and CAGR
+- Margin profile (gross, EBITDA, net)
+- CapEx as % of revenue
+- Working capital patterns
+- Leverage and cash position
 
 ### Step 2: Model Structure Setup
 
@@ -90,40 +136,38 @@ Create data tables for:
 - WACC vs. Terminal growth rate
 - CapEx intensity vs. Working capital efficiency
 
-## Output Format
-
-**Excel File** with:
-- Color-coded cells (blue for inputs, black for formulas, green for checks)
-- Clear section headers
-- Error checking formulas
-- Print-ready summary pages
-
 ## Usage Examples
 
 ### Example 1: Build model for Apple
 
 ```
-User: "Create a three-statement model for AAPL using their latest 10-K"
+User: "Create a three-statement model for AAPL"
 
-1. Fetch AAPL 10-K data from SEC EDGAR
-2. Extract 5-year historical financials
-3. Build assumptions based on historical trends
-4. Create 5-year projections
-5. Add DCF valuation with WACC calculation
-6. Include sensitivity tables
-7. Output: AAPL_Financial_Model.xlsx
+Step 1: python3 scripts/fetch_data.py AAPL --years 5
+Step 2: Review AAPL_3statement_annual_*.json
+Step 3: Build Excel with historical + 5-year projections
+
+Output: AAPL_Financial_Model.xlsx
 ```
 
-### Example 2: Model for Chinese company
+### Example 2: Quarterly model for earnings tracking
 
 ```
-User: "Build three-statement model for 茅台 (sh600519)"
+User: "Build quarterly model for Nvidia — last 8 quarters"
 
-1. Use tencent-finance to fetch historical data
-2. Extract annual report financials
-3. Build model with Chinese accounting standards
-4. Add sensitivity to alcohol consumption trends
-5. Output: Moutai_Financial_Model.xlsx
+python3 scripts/fetch_data.py NVDA --quarterly --years 8
+
+Output: NVDA_3statement_quarterly_*.json with 8 quarters
+```
+
+### Example 3: Model for Chinese company
+
+```
+User: "Build three-statement model for Moutai (sh600519)"
+
+→ Use tencent-finance skill for CN data
+→ Claude extracts annual report financials
+→ Build model with China accounting standards
 ```
 
 ## Best Practices
@@ -136,11 +180,11 @@ User: "Build three-statement model for 茅台 (sh600519)"
 
 ## Key Outputs
 
-1. **Integrated 3-Statement Model** (Excel)
-2. **Valuation Summary** (DCF, Comps, Precedents)
-3. **Sensitivity Analysis Dashboard**
-4. **Assumptions Documentation** (separate sheet)
-5. **Executive Summary** (key metrics and ratios)
+1. **Historical Data JSON** (from script)
+2. **Integrated 3-Statement Model** (Excel)
+3. **Valuation Summary** (DCF, Comps, Precedents)
+4. **Sensitivity Analysis Dashboard**
+5. **Assumptions Documentation**
 
 ## Related Skills
 

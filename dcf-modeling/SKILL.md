@@ -1,11 +1,59 @@
 ---
-name: dcf-modeling
+name: Discounted Cash Flow (DCF) modeling
 description: Build discounted cash flow valuation models with proper WACC calculations, scenario toggles, and sensitivity tables. Supports FCFF (Free Cash Flow to Firm), FCFE (Free Cash Flow to Equity), and APV (Adjusted Present Value) approaches. Use for intrinsic valuation, M&A target valuation, and investment analysis.
 ---
 
-# DCF Modeling
+# Discounted Cash Flow (DCF) Modeling
 
 Create comprehensive discounted cash flow valuation models.
+
+## Inputs
+
+- **Target company**: Ticker symbol (e.g. `AAPL`) or manual financial data
+- **Projection period**: 5–10 years (default: 5)
+- **DCF method**: FCFF (default), FCFE, or APV
+- **WACC assumptions**: Or let the script estimate from live data
+- **Terminal value method**: Perpetuity growth (default) or Exit multiple
+- **Scenarios**: Base / Bull / Bear growth assumptions
+
+## Outputs
+
+- **JSON file**: Historical financials + WACC inputs (`<TICKER>_dcf_inputs_YYYYMMDD.json`)
+- **Excel Model**: Integrated projections, WACC schedule, sensitivity tables
+- **Football field chart**: Valuation range across methods and scenarios
+
+## Data Sources
+
+- **Yahoo Finance** (via `yfinance`): Historical financials, beta, market data
+- **SEC EDGAR**: Annual filings for detailed historical data
+- **Manual input**: Custom growth and margin assumptions
+
+## Example Usage
+
+```
+"Build a 5-year DCF for Apple with 8.5% WACC"
+"DCF for a SaaS company growing 30% — use 10-year projection"
+"What's the implied WACC if the stock is fairly valued today?"
+```
+
+## Quick Start: Fetch Historical Data
+
+```bash
+# Fetch historical financials for DCF assumptions
+python3 scripts/fetch_data.py AAPL
+
+# Specify number of years
+python3 scripts/fetch_data.py MSFT --years 7 --output msft_dcf_inputs.json
+
+# After fetching, open the JSON and fill in dcf_assumptions_template
+```
+
+**Script output includes:**
+- Revenue, EBITDA, FCF for last 5 years
+- CapEx %, D&A, margins per year
+- Beta, market cap, net debt
+- WACC component estimates (Rf, ERP, Beta → Cost of Equity)
+- Revenue CAGR for calibrating growth assumptions
 
 ## Overview
 
@@ -43,8 +91,8 @@ Where:
 
 **Cost of Equity (CAPM):**
 - Risk-free rate: 10-year Treasury yield
-- Beta: Regression vs. market or industry average
-- Equity Risk Premium: 4-6% historical
+- Beta: Regression vs. market (fetched via script)
+- Equity Risk Premium: ~5% historical
 
 ### 3. Terminal Value
 
@@ -60,21 +108,20 @@ Terminal Value = EBITDA(n) × Industry Multiple
 
 ## Workflow
 
-### Step 1: Input Financial Data
+### Step 1: Fetch Historical Data
 
 ```bash
-# Fetch company financials
-python3 ~/.openclaw/workspace/skills/financial-services/dcf-modeling/scripts/prepare_dcf.py \
-  --ticker AAPL \
-  --years 5
+python3 scripts/fetch_data.py AAPL --years 5
 ```
+
+This outputs a JSON with revenue, EBITDA, FCF, CapEx, D&A, and WACC inputs.
 
 ### Step 2: Build WACC Assumptions
 
 | Component | Input | Source |
 |-----------|-------|--------|
 | Risk-free rate | 4.2% | 10Y Treasury |
-| Beta | 1.15 | Yahoo Finance |
+| Beta | Script-fetched | Yahoo Finance |
 | Equity risk premium | 5.0% | Historical |
 | Cost of debt | 4.5% | Credit rating |
 | Tax rate | 21% | Effective rate |
@@ -111,21 +158,15 @@ Create data tables:
 - Revenue CAGR vs. EBITDA Margin
 - Exit Multiple vs. WACC
 
-## Output Format
-
-**Excel Model** with:
-- **Assumptions**: WACC, growth rates, margins
-- **Projections**: 5-10 year cash flows
-- **Valuation**: Enterprise value, Equity value per share
-- **Sensitivities**: Data tables and tornado charts
-- **Football field**: Valuation ranges
-
 ## Usage Examples
 
 ### Example 1: Apple DCF
 
 ```
 User: "Build DCF for AAPL using 5-year projections"
+
+Step 1: python3 scripts/fetch_data.py AAPL
+Step 2: Review AAPL_dcf_inputs_*.json — fill in growth assumptions
 
 Inputs:
 - Revenue growth: 5%, 4%, 3%, 3%, 3%
@@ -145,13 +186,13 @@ Output:
 ```
 User: "DCF for a SaaS company growing 30% annually"
 
+python3 scripts/fetch_data.py <TICKER> --years 5
+
 Approach:
 - 10-year projection (high growth)
 - Gradual margin expansion
 - FCFE method (no debt)
 - Exit multiple terminal value
-
-Output: High-growth DCF with scenario toggles
 ```
 
 ## Best Practices
@@ -164,11 +205,11 @@ Output: High-growth DCF with scenario toggles
 
 ## Key Outputs
 
-1. **DCF Model** (Excel)
-2. **WACC Calculation** (Detailed breakdown)
-3. **Sensitivity Tables**
-4. **Football Field Valuation**
-5. **Investment Recommendation**
+1. **Historical Data JSON** (from script)
+2. **DCF Model** (Excel)
+3. **WACC Calculation** (Detailed breakdown)
+4. **Sensitivity Tables**
+5. **Football Field Valuation**
 
 ## Related Skills
 

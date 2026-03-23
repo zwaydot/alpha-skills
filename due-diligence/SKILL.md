@@ -1,11 +1,60 @@
 ---
-name: due-diligence
+name: Due diligence data pack creation
 description: Process data room documents into structured Excel data packs with financials, customer lists, contract terms, and risk factors. Standardize CIMs, offering memorandums, and due diligence materials into consistent formats. Use for PE/VC investment analysis, M&A due diligence, and transaction execution.
 ---
 
 # Due Diligence Data Pack Creation
 
 Extract and organize key information from due diligence materials.
+
+## Inputs
+
+- **Public company ticker**: For automated SEC EDGAR document retrieval (e.g. `AAPL`)
+- **Private company**: Upload CIM, financial statements, customer lists, contracts
+- **Data room access**: Folder of documents (PDF, Excel, Word)
+- **Form types**: Which SEC filings to retrieve (default: 10-K, 10-Q)
+
+## Outputs
+
+- **JSON file**: `<TICKER>_edgar_YYYYMMDD.json` — filing metadata and document URLs
+- **Excel Data Pack**: Structured workbook with financials, customers, contracts, risks
+- **DD Checklist**: Itemized status tracker with source references
+
+## Data Sources
+
+- **SEC EDGAR API** (free, no key required): `https://data.sec.gov/submissions/CIK{}.json`
+  - 10-K annual reports, 10-Q quarterly reports
+  - DEF 14A proxy statements, 8-K material events
+  - XBRL structured financial data
+- **User-provided documents**: CIM, data room PDFs, Excel exports
+
+## Example Usage
+
+```
+"Pull the latest 10-K and 10-Q filings for Apple"
+"Create a DD data pack for this SaaS acquisition target — here's the CIM"
+"Get all recent SEC filings for Microsoft and summarize key risks from 10-K"
+```
+
+## Quick Start: Fetch SEC EDGAR Filings
+
+```bash
+# Fetch latest 10-K and 10-Q for a US company
+python3 scripts/fetch_data.py AAPL
+
+# Specify which forms to retrieve
+python3 scripts/fetch_data.py MSFT --forms 10-K 10-Q DEF14A --limit 5
+
+# Use known CIK directly (Apple = 0000320193)
+python3 scripts/fetch_data.py AAPL --cik 0000320193 --output apple_dd.json
+```
+
+**Script output includes:**
+- Company metadata (CIK, SIC code, state, fiscal year end)
+- Links to all recent 10-K and 10-Q filings
+- Direct document URLs for reading/downloading
+- EDGAR company page and XBRL data links
+- DD checklist with key sections per form type
 
 ## Overview
 
@@ -22,7 +71,8 @@ Into standardized data packs for investment analysis.
 | Document | Key Data Extracted |
 |----------|-------------------|
 | CIM | Financial summary, Business overview, Investment highlights |
-| Financial Statements | Historical financials, KPIs, Segment data |
+| 10-K / Annual Report | Historical financials, KPIs, Segment data, Risk factors |
+| 10-Q / Quarterly | Latest quarter results, interim MD&A |
 | Customer Lists | Revenue concentration, Top customers, Churn |
 | Contracts | Key terms, Maturity dates, Revenue recognition |
 | Cap Table | Ownership structure, Option pools, Dilution |
@@ -30,16 +80,16 @@ Into standardized data packs for investment analysis.
 
 ## Workflow
 
-### Step 1: Document Ingestion
+### Step 1: Document Collection
 
+**For public companies:**
 ```bash
-# Process DD documents
-python3 ~/.openclaw/workspace/skills/financial-services/due-diligence/scripts/process_dd.py \
-  --input "/path/to/data-room" \
-  --output "DD_Data_Pack.xlsx"
+python3 scripts/fetch_data.py AAPL --forms 10-K 10-Q 8-K
 ```
 
-Supported formats: PDF, Excel, Word, Images (OCR)
+**For private companies:**
+- Upload: CIM, financial statements, customer list, cap table
+- Specify: Company name, sector, deal type
 
 ### Step 2: Financial Data Extraction
 
@@ -92,17 +142,20 @@ Create standardized Excel workbook:
 9. **Risk Factors**: Categorized list
 10. **DD Checklist**: Status tracker
 
-## Output Format
-
-**Excel Data Pack** with:
-- Standardized formatting
-- Data validation
-- Source references (document + page)
-- Quality checks (totals, cross-references)
-
 ## Usage Examples
 
-### Example 1: PE Buyout DD
+### Example 1: Public company filing review
+
+```
+User: "Get Apple's latest 10-K and summarize risks"
+
+python3 scripts/fetch_data.py AAPL --forms 10-K
+→ Retrieves filing URL
+→ Claude reads and summarizes Item 1A (Risk Factors)
+→ Claude extracts MD&A, financial highlights
+```
+
+### Example 2: PE Buyout DD
 
 ```
 User: "Create DD data pack for acquisition target"
@@ -117,7 +170,7 @@ Output:
 - Key risks: Customer concentration, Founder dependency
 ```
 
-### Example 2: VC Series B DD
+### Example 3: VC Series B DD
 
 ```
 User: "Analyze SaaS startup for Series B investment"
@@ -129,7 +182,6 @@ Output:
 - Net revenue retention: 120%
 - CAC payback: 18 months
 - Runway: 12 months
-- Founders: 45% ownership (post-money)
 ```
 
 ## Best Practices
@@ -142,14 +194,14 @@ Output:
 
 ## Key Outputs
 
-1. **DD Data Pack** (Excel)
-2. **Executive Summary** (1-page)
-3. **Risk Assessment Matrix**
-4. **Investment Committee Memo**
+1. **EDGAR Filing Links JSON** (from script)
+2. **DD Data Pack** (Excel)
+3. **Executive Summary** (1-page)
+4. **Risk Assessment Matrix**
 5. **DD Checklist Status**
 
 ## Related Skills
 
 - `financial-modeling` - For detailed modeling
-- `strip-profile` - For company overview
 - `comparables-analysis` - For valuation context
+- `initiating-coverage` - For full research report
