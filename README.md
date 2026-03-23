@@ -10,7 +10,7 @@ A structured toolkit covering the full investment workflow — from screening ca
 
 | Stage | Skill | Description |
 |-------|-------|-------------|
-| 找标的 | [stock-screener](./stock-screener) | Multi-factor screening across S&P 500 — filters by P/E, ROE, revenue growth, market cap |
+| 找标的 | [stock-screener](./stock-screener) | Multi-factor screening across any universe (S&P 500, Nasdaq 100, sector ETFs, or custom tickers) — filters by P/E, ROE, revenue growth, market cap |
 | 找标的 | [sector-radar](./sector-radar) | Sector rotation scanner — ranks 10 industry ETFs by momentum, valuation, and relative strength |
 | 研究公司 | [business-quality](./business-quality) | Moat assessment — 5-year ROE/ROIC/margin trends scored into a business quality rating |
 | 研究公司 | [competitive-dynamics](./competitive-dynamics) | Competitive landscape — revenue CAGR and margin comparison across a peer group |
@@ -52,7 +52,10 @@ Data scripts run independently — fetch real market data before analysis:
 
 ```bash
 # Screen for quality stocks
-python3 stock-screener/scripts/fetch_data.py
+python3 stock-screener/scripts/fetch_data.py                    # S&P 500 default
+python3 stock-screener/scripts/fetch_data.py --index nasdaq100  # Nasdaq 100
+python3 stock-screener/scripts/fetch_data.py --sector XLK       # Tech sector
+python3 stock-screener/scripts/fetch_data.py --tickers AAPL MSFT NVDA  # Custom
 
 # Assess business quality
 python3 business-quality/scripts/fetch_data.py AAPL
