@@ -1,0 +1,216 @@
+#!/usr/bin/env python3
+"""
+Tencent Finance CLI - A simple CLI for fetching stock data from Tencent Finance API
+"""
+
+import sys
+import requests
+import json
+from rich.console import Console
+from rich.table import Table
+
+console = Console()
+
+BASE_URL = "https://qt.gtimg.cn/q"
+
+def get_stock_data(symbols):
+    """Fetch stock data from Tencent Finance API"""
+    if isinstance(symbols, str):
+        symbols = [symbols]
+    
+    # Format symbols for Tencent API
+    formatted_symbols = []
+    for s in symbols:
+        s = s.strip().upper()
+        # Handle different formats
+        if s.startswith('SH'):
+            formatted_symbols.append(f'sh{s[2:]}')
+        elif s.startswith('SZ'):
+            formatted_symbols.append(f'sz{s[2:]}')
+        elif s.startswith('HK'):
+            formatted_symbols.append(f'hk{s[2:]}')
+        elif s.isdigit():
+            # Assume A-share index
+            if len(s) == 6:
+                if s.startswith('6'):
+                    formatted_symbols.append(f'sh{s}')
+                else:
+                    formatted_symbols.append(f'sz{s}')
+            else:
+                formatted_symbols.append(s)
+        else:
+            # US stock or other
+            formatted_symbols.append(s)
+    
+    symbol_str = ','.join(formatted_symbols)
+    url = f"{BASE_URL}={symbol_str}"
+    
+    try:
+        response = requests.get(url, timeout=10)
+        response.encoding = 'gbk'
+        return parse_response(response.text)
+    except Exception as e:
+        console.print(f"[red]Error fetching data: {e}[/red]")
+        return []
+
+def parse_response(text):
+    """Parse Tencent API response"""
+    stocks = []
+    lines = text.strip().split(';')
+    
+    for line in lines:
+        line = line.strip()
+        if not line or 'v_' not in line:
+            continue
+        
+        try:
+            # Extract data between quotes
+            start = line.find('"')
+            end = line.rfind('"')
+            if start == -1 or end == -1 or start == end:
+                continue
+            
+            data = line[start+1:end].split('~')
+            if len(data) < 35:
+                continue
+            
+            # Find datetime position (format: YYYYMMDDHHMMSS)
+            dt_idx = -1
+            for i, val in enumerate(data):
+                if len(val) == 14 and val.isdigit() and val.startswith('20'):
+                    dt_idx = i
+                    break
+            
+            price = float(data[3]) if data[3] else 0
+            prev_close = float(data[4]) if data[4] else 0
+            
+            if dt_idx > 0 and len(data) > dt_idx + 2:
+                # Change and change_pct are right after datetime
+                change = float(data[dt_idx + 1]) if data[dt_idx + 1] else 0
+                change_pct = float(data[dt_idx + 2]) if data[dt_idx + 2] else 0
+            else:
+                change = price - prev_close
+                change_pct = (change / prev_close * 100) if prev_close else 0
+            
+            stock = {
+                'symbol': data[2],
+                'name': data[1],
+                'price': price,
+                'change': change,
+                'change_pct': change_pct,
+                'prev_close': prev_close,
+            }
+            
+            stocks.append(stock)
+        except Exception as e:
+            continue
+    
+    return stocks
+
+def display_quote(stock):
+    """Display detailed quote"""
+    if not stock:
+        console.print("[red]No data found[/red]")
+        return
+    
+    s = stock[0]
+    color = "green" if s['change'] >= 0 else "red"
+    sign = "+" if s['change'] >= 0 else ""
+    
+    table = Table(title=f"{s['name']} ({s['symbol']})", show_header=False)
+    table.add_column("Field", style="cyan")
+    table.add_column("Value", style="white")
+    
+    table.add_row("最新价", f"[bold {color}]{s['price']:.2f}[/{color}]")
+    table.add_row("涨跌额", f"[{color}]{sign}{s['change']:.2f}[/{color}]")
+    table.add_row("涨跌幅", f"[{color}]{sign}{s['change_pct']:.2f}%[/{color}]")
+    table.add_row("开盘价", f"{s['open']:.2f}")
+    table.add_row("最高价", f"{s['high']:.2f}")
+    table.add_row("最低价", f"{s['low']:.2f}")
+    table.add_row("成交量", f"{s['volume']:,}")
+    
+    console.print(table)
+
+def display_price(stock):
+    """Display quick price"""
+    if not stock:
+        console.print("[red]No data found[/red]")
+        return
+    
+    s = stock[0]
+    color = "green" if s['change'] >= 0 else "red"
+    sign = "+" if s['change'] >= 0 else ""
+    
+    console.print(f"{s['name']}: [bold {color}]{s['price']:.2f}[/{color}] ({sign}{s['change_pct']:.2f}%)")
+
+def display_compare(stocks):
+    """Display comparison table"""
+    if not stocks:
+        console.print("[red]No data found[/red]")
+        return
+    
+    table = Table(title="Stock Comparison")
+    table.add_column("Name", style="cyan")
+    table.add_column("Price", justify="right")
+    table.add_column("Change", justify="right")
+    table.add_column("Change %", justify="right")
+    
+    for s in stocks:
+        color = "green" if s['change'] >= 0 else "red"
+        sign = "+" if s['change'] >= 0 else ""
+        table.add_row(
+            s['name'],
+            f"{s['price']:.2f}",
+            f"[{color}]{sign}{s['change']:.2f}[/{color}]",
+            f"[{color}]{sign}{s['change_pct']:.2f}%[/{color}]"
+        )
+    
+    console.print(table)
+
+def main():
+    if len(sys.argv) < 2:
+        console.print("[yellow]Usage: tfin [command] [symbol(s)][/yellow]")
+        console.print("\nCommands:")
+        console.print("  tfin AAPL           # Quick price")
+        console.print("  tfin quote AAPL     # Detailed quote")
+        console.print("  tfin compare A,B,C  # Compare stocks")
+        console.print("\nSymbols:")
+        console.print("  AAPL, TSLA          # US stocks")
+        console.print("  sh000001            # 上证指数")
+        console.print("  sz399001            # 深证成指")
+        console.print("  sz399006            # 创业板指")
+        console.print("  hk00700             # 腾讯控股")
+        return
+    
+    cmd = sys.argv[1].lower()
+    
+    if cmd in ['help', '--help', '-h']:
+        console.print("[bold]Tencent Finance CLI[/bold]")
+        console.print("\nCommands:")
+        console.print("  tfin [symbol]       # Quick price check")
+        console.print("  tfin quote [symbol] # Detailed quote")
+        console.print("  tfin compare [A,B]  # Compare stocks")
+        return
+    
+    if cmd == 'quote':
+        if len(sys.argv) < 3:
+            console.print("[red]Error: Please provide a symbol[/red]")
+            return
+        symbols = sys.argv[2].split(',')
+        data = get_stock_data(symbols)
+        display_quote(data)
+    elif cmd == 'compare':
+        if len(sys.argv) < 3:
+            console.print("[red]Error: Please provide symbols[/red]")
+            return
+        symbols = sys.argv[2].split(',')
+        data = get_stock_data(symbols)
+        display_compare(data)
+    else:
+        # Quick price
+        symbols = sys.argv[1].split(',')
+        data = get_stock_data(symbols)
+        display_price(data)
+
+if __name__ == '__main__':
+    main()
