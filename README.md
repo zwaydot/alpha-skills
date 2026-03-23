@@ -71,6 +71,25 @@ Create a three-statement financial model from this 10-K filing
 
 ---
 
+## Best Practices
+
+**Be specific about your requirements**
+Clearly state the company name, analysis type, and any specific parameters. For example, instead of "analyze this company," try "build a DCF model for Apple using a 10% WACC with 5-year projections and a terminal growth rate of 2.5%."
+
+**Provide context**
+Share relevant details upfront — industry, geography, time period, or the specific angle you care about. The more context you give, the more targeted the output. Attach source documents (10-Ks, CIMs, earnings transcripts) directly when available.
+
+**Review and refine**
+Treat the first output as a strong draft, not a final deliverable. After the skill generates output, ask for adjustments — tighten assumptions, change the peer set, reframe the investment thesis. Iteration is fast and cheap.
+
+**Leverage multiple skills together**
+Many workflows benefit from chaining skills. For example:
+- Use `initiating-coverage` to build the research thesis → `dcf-modeling` for valuation → `comparables-analysis` to benchmark the multiple
+- Use `due-diligence` to extract financials from a CIM → `financial-modeling` to build the full three-statement model
+- Use `earnings-analysis` after results → update your existing `dcf-modeling` model with revised estimates
+
+---
+
 ## Contributing
 
 Pull requests welcome. Each skill should include:
