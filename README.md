@@ -2,7 +2,7 @@
 
 > OpenClaw skills for buy-side investment decision-making.
 
-A structured toolkit covering the full investment workflow — from screening candidates to monitoring your portfolio. Supports **US and HK markets**, with an extensible architecture for adding new markets.
+6 skills covering the full investment workflow — from screening candidates to monitoring your portfolio. Supports **US and HK markets**, with an extensible architecture for adding new markets.
 
 ---
 
@@ -10,12 +10,12 @@ A structured toolkit covering the full investment workflow — from screening ca
 
 | Stage | Skill | Description |
 |-------|-------|-------------|
-| Idea Generation | [stock-screener](./stock-screener) | Two-phase server-side screening — filters by sector, P/E, ROE, market cap across US/HK/custom tickers, then scores and ranks candidates |
-| Idea Generation | [sector-radar](./sector-radar) | Sector rotation scanner — ranks 10 industry ETFs by momentum, valuation, and relative strength |
-| Deep Research | [business-quality](./business-quality) | Moat assessment — 5-year ROE/ROIC/margin trends scored into a business quality rating |
+| Idea Generation | [stock-screener](./stock-screener) | Two-phase screening — filters by sector, P/E, ROE, market cap across US/HK/custom tickers, then scores and ranks candidates |
+| Idea Generation | [sector-radar](./sector-radar) | Sector/ETF momentum scanner — ranks any set of ETFs by momentum, trend acceleration, valuation, and volume |
+| Deep Research | [business-quality](./business-quality) | Moat assessment — 5-year ROE/ROIC/margin/FCF trends scored into a Buffett-style quality rating |
 | Deep Research | [competitor-analysis](./competitor-analysis) | Rank competitors by relative position — growth, profitability, efficiency, margin momentum, R&D |
-| Valuation | [valuation-matrix](./valuation-matrix) | Multi-method valuation — DCF + reverse DCF + P/E + EV/EBITDA + FCF Yield + analyst consensus → triangulated fair value range |
-| Portfolio Management | [portfolio-monitor](./portfolio-monitor) | Portfolio diagnostics — sector exposure, risk decomposition, benchmark comparison, correlation, concentration |
+| Valuation | [valuation-matrix](./valuation-matrix) | Triangulated valuation — DCF + reverse DCF + P/E + EV/EBITDA + FCF Yield + analyst consensus → fair value range |
+| Portfolio Management | [portfolio-monitor](./portfolio-monitor) | Portfolio diagnostics — sector exposure, risk decomposition (Markowitz), benchmark comparison, correlation, concentration |
 
 ---
 
@@ -61,59 +61,67 @@ Data scripts run independently — fetch real market data before analysis:
 
 ```bash
 # Screen for quality stocks
-python3 stock-screener/scripts/fetch_data.py --sector Technology --pe 25        # US tech, PE<25
-python3 stock-screener/scripts/fetch_data.py --sector Technology --industry Semiconductors  # Sub-industry
-python3 stock-screener/scripts/fetch_data.py --index hstech                     # Hang Seng Tech
-python3 stock-screener/scripts/fetch_data.py --region hk --sector Technology    # HK tech
-python3 stock-screener/scripts/fetch_data.py --tickers AAPL MSFT NVDA --pe 40 --roe 10     # Custom list
-python3 stock-screener/scripts/fetch_data.py --sector Technology --pe 0 --roe 0 --top 50   # No filters
+python3 stock-screener/scripts/fetch_data.py --sector Technology --pe 25
+python3 stock-screener/scripts/fetch_data.py --tickers AAPL MSFT NVDA --pe 40 --roe 10
+python3 stock-screener/scripts/fetch_data.py --index hstech
+
+# Scan sector momentum
+python3 sector-radar/scripts/fetch_data.py
 
 # Assess business quality
 python3 business-quality/scripts/fetch_data.py AAPL
+
+# Compare competitors
+python3 competitor-analysis/scripts/fetch_data.py "AAPL MSFT GOOGL META"
 
 # Run valuation
 python3 valuation-matrix/scripts/fetch_data.py AAPL
 
 # Monitor a portfolio
 python3 portfolio-monitor/scripts/fetch_data.py "AAPL:30 MSFT:20 NVDA:30 GOOGL:20"
+python3 portfolio-monitor/scripts/fetch_data.py "0700.HK:40 9988.HK:30 1810.HK:30"
 ```
 
 **Example prompts:**
 
 ```
-Find US tech stocks with PE under 25 and strong profitability — what are the best picks?
+Find US tech stocks with PE under 25 and strong profitability
 ```
 
 ```
-Assess the business quality of AAPL — focus on moat durability and capital allocation
+Which sectors have the strongest momentum right now?
 ```
 
 ```
-Build a valuation matrix for NVDA and tell me where it sits vs. fair value
+Assess the business quality of AAPL — focus on moat durability
 ```
 
 ```
-Analyze my portfolio: AAPL:25 MSFT:25 NVDA:30 AMZN:20
+Compare AAPL, MSFT, and GOOGL — who has the strongest competitive position?
+```
+
+```
+Build a valuation matrix for NVDA — where does it sit vs fair value?
+```
+
+```
+Analyze my portfolio: AAPL:25 MSFT:25 NVDA:30 AMZN:20 — is my risk balanced?
 ```
 
 ---
 
 ## Best Practices
 
-**Be specific about your requirements**
-State the ticker, time period, peer set, or portfolio weights upfront. The more precise the input, the more actionable the output.
-
-**Provide context**
-Share your investment thesis or what you're trying to decide. "Should I buy more AAPL" gives very different context than "compare AAPL's moat to MSFT."
-
-**Review and refine**
-Treat first outputs as structured drafts. Ask follow-up questions — tighten assumptions, challenge the risk score, pressure-test the valuation.
-
-**Chain skills together**
-The full workflow is more powerful than any single skill:
+**Chain skills together** — the full workflow is more powerful than any single skill:
 - `sector-radar` → identify a sector → `stock-screener` → find candidates
 - `business-quality` + `competitor-analysis` → research → `valuation-matrix` → price it
 - `valuation-matrix` → decide → `portfolio-monitor` → track it
+
+**Be specific** — state the ticker, peer set, or portfolio weights upfront.
+
+**Provide context** — "Should I buy more AAPL" gives different output than "compare AAPL's moat to MSFT."
+
+**Iterate** — treat first outputs as drafts. Challenge assumptions, tighten scenarios, pressure-test the valuation.
 
 ---
 
