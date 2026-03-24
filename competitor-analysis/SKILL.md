@@ -1,9 +1,9 @@
 ---
-name: competitive-dynamics
-description: "Rank competitors within an industry by relative competitive position. Evaluates which company in a peer group has the strongest competitive trajectory by comparing revenue growth, profitability, efficiency, margin momentum, and R&D investment on a rank-based scoring system. Use this skill whenever the user wants to: compare companies competing in the same industry, determine which competitor is gaining or losing ground, analyze competitive positioning within a peer set, decide which company in a sector is most worth investing in, or understand revenue share dynamics among rivals. Do NOT use for single-company quality analysis (business-quality), stock screening across sectors (stock-screener), or valuation/DCF analysis."
+name: competitor-analysis
+description: "Rank competitors within an industry by relative competitive position. Evaluates which company in a peer group has the strongest competitive trajectory by comparing revenue growth, profitability, efficiency, margin momentum, and R&D investment on a rank-based scoring system. Use this skill whenever the user wants to: compare companies competing in the same industry, determine which competitor is gaining or losing ground, analyze competitive positioning within a peer set, decide which company in a sector is most worth investing in, understand revenue share dynamics among rivals, or do competitor analysis. Do NOT use for single-company quality analysis (business-quality), stock screening across sectors (stock-screener), or valuation/DCF analysis."
 ---
 
-# competitive-dynamics
+# competitor-analysis
 
 **What it does:** Ranks competitors within an industry by relative competitive position. Answers: "Among these rivals, which has the strongest competitive trajectory and why?"
 
@@ -13,7 +13,7 @@ description: "Rank competitors within an industry by relative competitive positi
 
 ### Why Relative, Not Absolute
 
-business-quality asks "Is this a good business?" using absolute thresholds (ROE >20% = excellent). competitive-dynamics asks "Which competitor is strongest?" using peer-relative ranking. A 15% gross margin is terrible in software but dominant in grocery retail. Absolute thresholds fail across industries; rank-based scoring works universally.
+business-quality asks "Is this a good business?" using absolute thresholds (ROE >20% = excellent). competitor-analysis asks "Which competitor is strongest?" using peer-relative ranking. A 15% gross margin is terrible in software but dominant in grocery retail. Absolute thresholds fail across industries; rank-based scoring works universally.
 
 This follows the core insight from Porter's competitive strategy: competitive advantage is meaningful only relative to rivals in the same industry. A company's financials matter not in isolation, but in comparison to the peer set it competes against.
 

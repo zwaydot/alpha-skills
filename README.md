@@ -13,7 +13,7 @@ A structured toolkit covering the full investment workflow — from screening ca
 | Idea Generation | [stock-screener](./stock-screener) | Two-phase server-side screening — filters by sector, P/E, ROE, market cap across US/HK/custom tickers, then scores and ranks candidates |
 | Idea Generation | [sector-radar](./sector-radar) | Sector rotation scanner — ranks 10 industry ETFs by momentum, valuation, and relative strength |
 | Deep Research | [business-quality](./business-quality) | Moat assessment — 5-year ROE/ROIC/margin trends scored into a business quality rating |
-| Deep Research | [competitive-dynamics](./competitive-dynamics) | Competitive landscape — revenue CAGR and margin comparison across a peer group |
+| Deep Research | [competitor-analysis](./competitor-analysis) | Rank competitors by relative position — growth, profitability, efficiency, margin momentum, R&D |
 | Valuation | [valuation-matrix](./valuation-matrix) | Multi-method valuation — FCF Yield + EV/EBITDA + P/E (sector-aware multiples) + analyst consensus → implied price range |
 | Decision Support | [risk-framework](./risk-framework) | Systematic risk scoring — beta, volatility, leverage, liquidity → overall risk rating |
 | Portfolio Management | [portfolio-monitor](./portfolio-monitor) | Portfolio analytics — correlation matrix, volatility contributions, concentration risk |
@@ -121,7 +121,7 @@ Treat first outputs as structured drafts. Ask follow-up questions — tighten as
 **Chain skills together**
 The full workflow is more powerful than any single skill:
 - `sector-radar` → identify a sector → `stock-screener` → find candidates
-- `business-quality` + `competitive-dynamics` → research → `valuation-matrix` → price it
+- `business-quality` + `competitor-analysis` → research → `valuation-matrix` → price it
 - `risk-framework` → size the position → `portfolio-monitor` → track it
 
 ---

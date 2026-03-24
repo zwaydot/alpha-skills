@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-competitive-dynamics: Rank competitors within an industry by relative competitive position.
+competitor-analysis: Rank competitors within an industry by relative competitive position.
 
 Usage:
     python3 scripts/fetch_data.py NVDA AMD INTC QCOM
