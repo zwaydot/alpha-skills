@@ -41,30 +41,6 @@ VALID_SECTORS = {
     "Industrials", "Real Estate", "Technology", "Utilities",
 }
 
-# Common sector name aliases for fuzzy matching
-SECTOR_ALIASES = {
-    "tech": "Technology",
-    "it": "Technology",
-    "finance": "Financial Services",
-    "financial": "Financial Services",
-    "bank": "Financial Services",
-    "banking": "Financial Services",
-    "health": "Healthcare",
-    "pharma": "Healthcare",
-    "energy": "Energy",
-    "oil": "Energy",
-    "industrial": "Industrials",
-    "manufacturing": "Industrials",
-    "consumer": "Consumer Cyclical",
-    "retail": "Consumer Cyclical",
-    "realestate": "Real Estate",
-    "property": "Real Estate",
-    "materials": "Basic Materials",
-    "mining": "Basic Materials",
-    "utility": "Utilities",
-    "telecom": "Communication Services",
-    "media": "Communication Services",
-}
 
 # Style presets: factor weights (must sum to 100)
 STYLE_PRESETS = {
@@ -76,20 +52,26 @@ STYLE_PRESETS = {
 
 
 def resolve_sector(user_input):
-    """Resolve user's sector input to a valid Yahoo Finance sector name."""
+    """Resolve user's sector input to a valid Yahoo Finance sector name.
+
+    Yahoo Finance only accepts these 11 sector names. The caller (LLM) is
+    responsible for mapping user intent to the correct sector name. This
+    function does case-insensitive and substring matching as a convenience.
+    """
     if not user_input:
         return None
+    # Exact match (case-insensitive)
     for s in VALID_SECTORS:
         if user_input.lower() == s.lower():
             return s
+    # Substring match
     for s in VALID_SECTORS:
         if user_input.lower() in s.lower() or s.lower() in user_input.lower():
             return s
-    for alias, sector in SECTOR_ALIASES.items():
-        if alias in user_input.lower():
-            return sector
     print(f"[screener] Warning: sector '{user_input}' not recognized. "
-          f"Valid: {', '.join(sorted(VALID_SECTORS))}", file=sys.stderr)
+          f"Valid: {', '.join(sorted(VALID_SECTORS))}. "
+          f"Use --industry for sub-sectors or --tickers for specific stocks.",
+          file=sys.stderr)
     return None
 
 
@@ -510,8 +492,8 @@ def main():
     parser = argparse.ArgumentParser(description="Multi-factor stock screener v2")
     parser.add_argument("--region", default="us",
                         help="Market region: us, hk, gb, jp, etc. (default: us)")
-    parser.add_argument("--index", choices=["hsi", "hstech"],
-                        help="Predefined HK index universe")
+    parser.add_argument("--index",
+                        help="Predefined index universe (e.g., hsi, hstech)")
     parser.add_argument("--tickers", nargs="+",
                         help="Custom ticker list (e.g., AAPL MSFT or 0700.HK)")
     parser.add_argument("--sector",
@@ -532,18 +514,25 @@ def main():
     parser.add_argument("--output", default="screener_results.csv")
     args = parser.parse_args()
 
-    use_custom = args.tickers or args.index in ("hsi", "hstech")
+    use_custom = args.tickers or args.index
 
     if use_custom:
         if args.tickers:
             tickers = args.tickers
             label = f"custom ({len(tickers)} tickers)"
-        elif args.index == "hsi":
-            tickers = HSI_TICKERS if HSI_TICKERS else []
-            label = f"Hang Seng Index ({len(tickers)} tickers)"
-        else:
-            tickers = HSTECH_TICKERS if HSTECH_TICKERS else []
-            label = f"Hang Seng Tech ({len(tickers)} tickers)"
+        elif args.index:
+            index_map = {
+                "hsi": (HSI_TICKERS, "Hang Seng Index"),
+                "hstech": (HSTECH_TICKERS, "Hang Seng Tech"),
+            }
+            if args.index.lower() in index_map:
+                tickers, idx_name = index_map[args.index.lower()]
+                label = f"{idx_name} ({len(tickers)} tickers)"
+            else:
+                print(f"[screener] Unknown index '{args.index}'. "
+                      f"Known: {', '.join(index_map.keys())}. "
+                      f"Use --tickers for custom lists.", file=sys.stderr)
+                sys.exit(1)
 
         if not tickers:
             print("[screener] ERROR: No tickers in universe.", file=sys.stderr)

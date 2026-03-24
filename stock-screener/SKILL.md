@@ -120,8 +120,8 @@ python3 scripts/fetch_data.py --sector Technology --top 50 --pe 0 --roe 0
 | `--mcap` | 1.0 | Min market cap ($B); 0 to disable |
 | `--top` | 25 | Max server-side results |
 | `--style` | balanced | Scoring style: balanced, value, growth, quality |
-| `--tickers` | (none) | Custom ticker list (bypasses server screen) |
-| `--index` | (none) | hsi or hstech (predefined HK lists) |
+| `--tickers` | (none) | Custom ticker list — use for niche themes (defense, gold, EV, etc.) |
+| `--index` | (none) | Predefined index (hsi, hstech). Use `--tickers` for other indices |
 
 ### Market-Specific Defaults
 
@@ -141,20 +141,14 @@ The script also prints a formatted report to stdout with ranked table, industry 
 
 ## Translating User Intent
 
-| User says | Parameters |
-|-----------|-----------|
-| "tech stocks" | `--sector Technology` |
-| "semiconductors" | `--sector Technology --industry Semiconductors` |
-| "AI stocks" | `--sector Technology --industry Semiconductor` |
-| "bank stocks" | `--sector "Financial Services" --industry Banks` |
-| "pharma" | `--sector Healthcare --industry "Drug Manufacturers"` |
-| "HK tech" | `--region hk --sector Technology` |
-| "cheap stocks" / "undervalued" | `--style value` |
-| "high growth" | `--style growth`, relax `--pe` to 40+ |
-| "quality compounders" | `--style quality` |
-| "defensive picks" | `--style quality` |
-| "fair value" | Relax `--pe` to 25-30 |
-| "all tech, no filter" | `--sector Technology --pe 0 --roe 0` |
+The script's `--sector` parameter only accepts Yahoo Finance's 11 standard sectors: Basic Materials, Communication Services, Consumer Cyclical, Consumer Defensive, Energy, Financial Services, Healthcare, Industrials, Real Estate, Technology, Utilities. These are broad categories — most user requests target something more specific.
+
+**Principle**: Map user intent to the right combination of `--sector`, `--industry`, and `--tickers`. Use your knowledge of market structure to find the best fit — don't be limited to the examples below.
+
+- **Broad sector** ("tech stocks"): `--sector Technology`
+- **Sub-industry** ("semiconductors"): `--sector Technology --industry Semiconductors`
+- **Niche theme** ("defense", "gold miners", "solar", "EV"): These are not Yahoo Finance sectors. Use `--tickers` with representative stocks, or use `--sector` + `--industry` if the theme maps to a standard industry (e.g., defense → `--sector Industrials --industry "Aerospace & Defense"`)
+- **Style intent** ("cheap", "undervalued"): `--style value`; ("high growth"): `--style growth`, relax `--pe`; ("quality", "defensive"): `--style quality`
 
 ## After Running the Script
 
