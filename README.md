@@ -15,7 +15,6 @@ A structured toolkit covering the full investment workflow — from screening ca
 | Deep Research | [business-quality](./business-quality) | Moat assessment — 5-year ROE/ROIC/margin trends scored into a business quality rating |
 | Deep Research | [competitor-analysis](./competitor-analysis) | Rank competitors by relative position — growth, profitability, efficiency, margin momentum, R&D |
 | Valuation | [valuation-matrix](./valuation-matrix) | Multi-method valuation — DCF + reverse DCF + P/E + EV/EBITDA + FCF Yield + analyst consensus → triangulated fair value range |
-| Decision Support | [risk-framework](./risk-framework) | Systematic risk scoring — beta, volatility, leverage, liquidity → overall risk rating |
 | Portfolio Management | [portfolio-monitor](./portfolio-monitor) | Portfolio analytics — correlation matrix, volatility contributions, concentration risk |
 | Portfolio Management | [catalyst-calendar](./catalyst-calendar) | 90-day catalyst calendar — earnings dates, dividend dates, key events |
 
@@ -98,10 +97,6 @@ Build a valuation matrix for NVDA and tell me where it sits vs. fair value
 ```
 
 ```
-Score the risks for TSLA across fundamental, valuation, execution, and macro dimensions
-```
-
-```
 Analyze my portfolio: AAPL:25 MSFT:25 NVDA:30 AMZN:20
 ```
 
@@ -122,7 +117,7 @@ Treat first outputs as structured drafts. Ask follow-up questions — tighten as
 The full workflow is more powerful than any single skill:
 - `sector-radar` → identify a sector → `stock-screener` → find candidates
 - `business-quality` + `competitor-analysis` → research → `valuation-matrix` → price it
-- `risk-framework` → size the position → `portfolio-monitor` → track it
+- `valuation-matrix` → decide → `portfolio-monitor` → track it
 
 ---
 
