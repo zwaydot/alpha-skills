@@ -1,0 +1,25 @@
+{
+  "skill_name": "sector-radar",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "帮我看看美股各板块的轮动情况，哪些板块有动量优势",
+      "expected_output": "Runs sector scan with US SPDR ETFs, uses SPY as benchmark, analyzes momentum leaders/laggards with relative strength context"
+    },
+    {
+      "id": 2,
+      "prompt": "I want to compare tech sub-sectors — semiconductors vs software vs cybersecurity vs cloud. Which has the best momentum right now?",
+      "expected_output": "Uses thematic ETFs like SMH, IGV, HACK, SKYY with XLK or QQQ as benchmark, provides relative strength comparison"
+    },
+    {
+      "id": 3,
+      "prompt": "Compare US, Japan, Germany, and China equity markets. Where should I be overweight?",
+      "expected_output": "Uses country ETFs (SPY, EWJ, EWG, FXI or similar) with appropriate benchmark, discusses geographic rotation"
+    },
+    {
+      "id": 4,
+      "prompt": "港股各板块现在怎么样？科技、金融、地产、消费哪个强",
+      "expected_output": "Uses HK sector ETFs (3067.HK, 3033.HK, 3012.HK, 3040.HK) with 2800.HK benchmark, Chinese response"
+    }
+  ]
+}

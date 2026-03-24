@@ -160,10 +160,17 @@ The script outputs data. Your job is to add the analysis that makes it actionabl
    - "MSFT scores 77.9 (balanced): top valuation rank (PE 23.9, EV/EBITDA 16.4 — cheapest in set), strong profitability (ROE 34.4%), solid growth (38.2% blend), low debt (D/E 31.5). Momentum dragged slightly (-2.9%)."
    - "NVDA scores 79.1 (growth): explosive growth (84.4%) and momentum (42.2%) dominate under growth weights, despite poor valuation rank."
 
-3. **Compare style impact** — If the user's intent suggests a specific style, note how rankings would differ under other presets.
+3. **Business & catalyst context** — Numbers alone don't tell the user whether to act. For the top 3-5 candidates, briefly explain what's driving the quantitative signals and what could change them. Use your own knowledge — do not web search for mainstream stocks (NVDA, AAPL, MSFT, etc.). Only search if a candidate is genuinely unfamiliar:
+   - **What's behind the numbers**: "NVDA's 84% growth is AI GPU demand — data center revenue tripled as hyperscalers race to build training clusters" is actionable; "NVDA has strong growth" is not.
+   - **Upcoming catalysts or risks**: Earnings dates, product launches, regulatory decisions, competitive threats that could shift the thesis. E.g., "AAPL reports Q2 on May 1; Services growth deceleration would pressure the quality score."
+   - **Signal vs expectation**: When a stock scores well on factors the market already expects (e.g., high momentum for a consensus favorite), upside may be priced in. When a stock scores well on factors the market is underweighting (e.g., strong safety metrics in a name perceived as risky), that's a potential edge.
 
-4. **Note industry concentration** — If results cluster in one sub-industry, flag this as concentration risk.
+   Keep this concise — 2-3 sentences per stock. The goal is helping the user decide which candidates deserve deeper research (via `business-quality`), not replacing that research.
 
-5. **Flag anomalies and filter noise** — The script returns raw data that may include non-ordinary shares (preferred stocks, depositary receipts, dual-listed duplicates like RHHBY/RHHBF for Roche). When presenting results to the user, identify and exclude these: preferred shares typically have abnormally low PE and contain "Depositary" in their name; duplicates are the same company appearing with different tickers. Only surface the primary common stock ticker for each company. Also flag extreme metrics (ROE >100%, negative growth, very high D/E) and explain why.
+4. **Compare style impact** — If the user's intent suggests a specific style, note how rankings would differ under other presets.
 
-6. **Recommend next steps** — Suggest using `business-quality` for moat analysis or `valuation-matrix` for DCF/comparable valuation on top picks.
+5. **Note industry concentration** — If results cluster in one sub-industry, flag this as concentration risk.
+
+6. **Flag anomalies and filter noise** — The script returns raw data that may include non-ordinary shares (preferred stocks, depositary receipts, dual-listed duplicates like RHHBY/RHHBF for Roche). When presenting results to the user, identify and exclude these: preferred shares typically have abnormally low PE and contain "Depositary" in their name; duplicates are the same company appearing with different tickers. Only surface the primary common stock ticker for each company. Also flag extreme metrics (ROE >100%, negative growth, very high D/E) and explain why.
+
+7. **Recommend next steps** — Suggest using `business-quality` for moat analysis or `valuation-matrix` for DCF/comparable valuation on top picks.
