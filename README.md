@@ -19,14 +19,6 @@
 
 ---
 
-## Requirements
-
-- [OpenClaw](https://openclaw.ai) — AI agent runtime
-- Python 3.9+
-- `yfinance` — `pip install yfinance`
-
----
-
 ## Installation
 
 ```bash
