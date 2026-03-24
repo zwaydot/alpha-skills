@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
 """
-business-quality: Fetch 5-year ROE/ROIC/gross margin/net margin trends.
+business-quality: 5-year profitability, cash flow quality, and moat assessment.
 
 Usage:
     python3 scripts/fetch_data.py AAPL
-    python3 scripts/fetch_data.py AAPL MSFT GOOGL
-    python3 scripts/fetch_data.py AAPL > aapl_quality.json
+    python3 scripts/fetch_data.py AAPL MSFT GOOGL JPM
 """
 
-import sys
-import os
-import json
+import sys, os, json
 from datetime import datetime
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'lib'))
@@ -25,207 +22,199 @@ try:
     import pandas as pd
     import numpy as np
 except ImportError as e:
-    print(f"ERROR: Missing dependency — {e}. Run: pip install yfinance pandas numpy")
+    print(f"ERROR: Missing dependency — {e}. Run: pip install yfinance pandas numpy", file=sys.stderr)
     sys.exit(1)
 
 
 def safe_float(val, default=None):
     try:
         v = float(val)
-        if pd.isna(v) or not np.isfinite(v):
-            return default
-        return round(v, 4)
+        return round(v, 4) if pd.notna(v) and np.isfinite(v) else default
     except Exception:
         return default
 
 
-def compute_trend(values: list) -> dict:
-    """Compute direction and approximate CAGR for a list of annual values (oldest first)."""
+def compute_trend(values):
     vals = [v for v in values if v is not None]
     if len(vals) < 2:
         return {"direction": "insufficient_data", "cagr_pct": None}
-
-    first, last = vals[0], vals[-1]
-    n = len(vals) - 1
-
-    if first is None or first == 0:
-        direction = "improving" if (last or 0) > 0 else "declining"
-        return {"direction": direction, "cagr_pct": None}
-
+    first, last, n = vals[0], vals[-1], len(vals) - 1
+    if not first or first == 0:
+        return {"direction": "improving" if (last or 0) > 0 else "declining", "cagr_pct": None}
     try:
-        cagr = (abs(last / first) ** (1 / n) - 1) * 100 * (1 if last >= first else -1)
-        cagr = round(cagr, 2)
+        cagr = round((abs(last / first) ** (1 / n) - 1) * 100 * (1 if last >= first else -1), 2)
     except Exception:
         cagr = None
-
-    direction = "improving" if (last or 0) > (first or 0) else "declining"
-    return {"direction": direction, "cagr_pct": cagr}
+    return {"direction": "improving" if (last or 0) > (first or 0) else "declining", "cagr_pct": cagr}
 
 
-def score_metric(values: list, excellent_threshold: float, good_threshold: float) -> float:
-    """Score a metric based on average level. Returns 0.0–1.0 with linear interpolation."""
+def score_metric(values, excellent, good):
     vals = [v for v in values if v is not None]
     if not vals:
-        return 0.0
+        return None  # None = unavailable, triggers weight redistribution
     avg = sum(vals) / len(vals)
-    floor = good_threshold * 0.5  # below this = 0
-    if avg >= excellent_threshold:
+    floor = good * 0.5
+    if avg >= excellent:
         return 1.0
-    elif avg >= good_threshold:
-        # Linear from 0.6 to 1.0
-        return round(0.6 + 0.4 * (avg - good_threshold) / (excellent_threshold - good_threshold), 3)
+    elif avg >= good:
+        return round(0.6 + 0.4 * (avg - good) / (excellent - good), 3)
     elif avg >= floor:
-        # Linear from 0.0 to 0.6
-        return round(0.6 * (avg - floor) / (good_threshold - floor), 3)
+        return round(0.6 * (avg - floor) / (good - floor), 3)
     return 0.0
 
 
-def score_stability(values: list) -> float:
-    """Score consistency (low variance = higher score). Returns 0.0–1.0."""
+def score_stability(values):
     vals = [v for v in values if v is not None]
     if len(vals) < 2:
-        return 0.5
+        return None
     mean = sum(vals) / len(vals)
     if mean == 0:
         return 0.0
     cv = (sum((v - mean) ** 2 for v in vals) / len(vals)) ** 0.5 / abs(mean)
-    # CV < 0.1 = very stable (1.0), CV > 0.5 = very unstable (0.0)
     return round(max(0.0, min(1.0, 1.0 - cv * 2)), 3)
 
 
-def fetch_quality(ticker_sym: str) -> dict:
+def score_inverse(values, excellent, ceiling):
+    """Score where lower is better. excellent=best, ceiling=worst acceptable."""
+    vals = [v for v in values if v is not None]
+    if not vals:
+        return None
+    avg = sum(vals) / len(vals)
+    if avg <= excellent:
+        return 1.0
+    elif avg <= ceiling:
+        return round(1.0 - (avg - excellent) / (ceiling - excellent), 3)
+    return 0.0
+
+
+def extract_row(df, row_names, columns):
+    """Try multiple row names, return first match."""
+    if df is None or df.empty:
+        return {}
+    for name in (row_names if isinstance(row_names, list) else [row_names]):
+        if name in df.index:
+            return {str(c.year) if hasattr(c, "year") else str(c)[:4]: safe_float(df.loc[name, c]) for c in columns}
+    return {}
+
+
+def fetch_quality(ticker_sym):
     t = yf.Ticker(ticker_sym)
     info = t.info
     market = detect_market(ticker_sym)
     tax_rate = get_tax_rate(market)
-
     name = info.get("longName") or info.get("shortName", ticker_sym)
 
-    # Get annual financials
     try:
-        fin = t.financials  # income statement (annual, columns = years desc)
-        bs = t.balance_sheet  # balance sheet (annual)
-        cf = t.cashflow  # cash flow (annual)
+        fin = t.financials
+        bs = t.balance_sheet
+        cf = t.cashflow
     except Exception as e:
         return {"error": str(e), "ticker": ticker_sym}
 
-    years_data = {}
-    if fin is not None and not fin.empty:
-        for col in fin.columns[:5]:  # up to 5 years
-            year_label = str(col.year) if hasattr(col, "year") else str(col)[:4]
-            years_data[year_label] = {}
+    if fin is None or fin.empty:
+        return {"error": "No financial data", "ticker": ticker_sym}
 
-        # Revenue and income
-        for row_name, key in [
-            ("Total Revenue", "revenue"),
-            ("Gross Profit", "gross_profit"),
-            ("Net Income", "net_income"),
-        ]:
-            if row_name in fin.index:
-                for col in fin.columns[:5]:
-                    year = str(col.year) if hasattr(col, "year") else str(col)[:4]
-                    years_data.setdefault(year, {})[key] = safe_float(fin.loc[row_name, col])
+    cols = fin.columns[:5]
+    year_key = lambda c: str(c.year) if hasattr(c, "year") else str(c)[:4]
 
-        # Balance sheet items
-        if bs is not None and not bs.empty:
-            for row_name, key in [
-                ("Total Equity Gross Minority Interest", "equity"),
-                ("Stockholders Equity", "equity"),
-                ("Total Assets", "total_assets"),
-                ("Total Debt", "total_debt"),
-                ("Cash And Cash Equivalents", "cash"),
-            ]:
-                if row_name in bs.index:
-                    for col in bs.columns[:5]:
-                        year = str(col.year) if hasattr(col, "year") else str(col)[:4]
-                        if key == "equity" and "equity" in years_data.get(year, {}):
-                            continue  # prefer first match
-                        years_data.setdefault(year, {})[key] = safe_float(bs.loc[row_name, col])
+    # Extract raw data
+    revenue = extract_row(fin, "Total Revenue", cols)
+    gross_profit = extract_row(fin, "Gross Profit", cols)
+    net_income = extract_row(fin, "Net Income", cols)
+    ebit = extract_row(fin, ["EBIT", "Operating Income"], cols)
+    equity = extract_row(bs, ["Total Equity Gross Minority Interest", "Stockholders Equity"], bs.columns[:5] if bs is not None and not bs.empty else [])
+    total_debt = extract_row(bs, "Total Debt", bs.columns[:5] if bs is not None and not bs.empty else [])
+    cash = extract_row(bs, ["Cash And Cash Equivalents", "Cash Cash Equivalents And Short Term Investments"], bs.columns[:5] if bs is not None and not bs.empty else [])
+    ocf = extract_row(cf, ["Operating Cash Flow", "Total Cash From Operating Activities", "Cash Flow From Continuing Operating Activities"], cf.columns[:5] if cf is not None and not cf.empty else [])
 
-        # EBIT for ROIC calculation
-        for row_name in ["EBIT", "Operating Income"]:
-            if row_name in fin.index:
-                for col in fin.columns[:5]:
-                    year = str(col.year) if hasattr(col, "year") else str(col)[:4]
-                    if "ebit" not in years_data.get(year, {}):
-                        years_data.setdefault(year, {})["ebit"] = safe_float(fin.loc[row_name, col])
+    sorted_years = sorted(set(revenue.keys()) | set(net_income.keys()))
 
     # Compute ratios per year
-    sorted_years = sorted(years_data.keys())
-    roe_series = []
-    roic_series = []
-    gross_margin_series = []
-    net_margin_series = []
-    annual_metrics = {}
+    roe_s, roic_s, gm_s, nm_s, fcf_s, de_s, rev_s = [], [], [], [], [], [], []
+    annual = {}
 
-    for year in sorted_years:
-        d = years_data[year]
-        rev = d.get("revenue")
-        gp = d.get("gross_profit")
-        ni = d.get("net_income")
-        equity = d.get("equity")
-        ebit = d.get("ebit")
-        total_assets = d.get("total_assets")
-        total_debt = d.get("total_debt", 0) or 0
-        cash = d.get("cash", 0) or 0
+    for yr in sorted_years:
+        rev = revenue.get(yr)
+        gp = gross_profit.get(yr)
+        ni = net_income.get(yr)
+        eq = equity.get(yr)
+        eb = ebit.get(yr)
+        td = total_debt.get(yr, 0) or 0
+        ca = cash.get(yr, 0) or 0
+        op = ocf.get(yr)
 
-        roe = round(ni / equity * 100, 2) if ni and equity and equity != 0 else None
-        gross_margin = round(gp / rev * 100, 2) if gp and rev and rev != 0 else None
-        net_margin = round(ni / rev * 100, 2) if ni and rev and rev != 0 else None
+        roe = round(ni / eq * 100, 2) if ni and eq and eq != 0 else None
+        gm = round(gp / rev * 100, 2) if gp and rev and rev != 0 else None
+        nm = round(ni / rev * 100, 2) if ni and rev and rev != 0 else None
+        de = round(td / eq, 2) if td is not None and eq and eq > 0 else None
 
-        # ROIC = NOPAT / Invested Capital
-        # NOPAT = EBIT * (1 - tax_rate)
-        # Invested Capital = Total Debt + Equity - Cash
-        nopat = ebit * (1 - tax_rate) if ebit else None
-        invested_capital = (total_debt or 0) + (equity or 0) - (cash or 0)
-        roic = round(nopat / invested_capital * 100, 2) if nopat and invested_capital and invested_capital != 0 else None
+        nopat = eb * (1 - tax_rate) if eb else None
+        ic = td + (eq or 0) - ca
+        roic = round(nopat / ic * 100, 2) if nopat and ic and ic != 0 else None
 
-        roe_series.append(roe)
-        roic_series.append(roic)
-        gross_margin_series.append(gross_margin)
-        net_margin_series.append(net_margin)
+        fcf_conv = round(op / ni, 2) if op and ni and ni > 0 else None
+        rev_b = round(rev / 1e9, 2) if rev else None
 
-        annual_metrics[year] = {
-            "roe_pct": roe,
-            "roic_pct": roic,
-            "gross_margin_pct": gross_margin,
-            "net_margin_pct": net_margin,
-        }
+        roe_s.append(roe); roic_s.append(roic); gm_s.append(gm); nm_s.append(nm)
+        fcf_s.append(fcf_conv); de_s.append(de); rev_s.append(rev)
 
-    # Scoring
-    roe_level_score = score_metric(roe_series, excellent_threshold=20, good_threshold=15)
-    roe_stability_score = score_stability(roe_series)
-    roic_level_score = score_metric(roic_series, excellent_threshold=15, good_threshold=10)
-    gross_margin_score = score_metric(gross_margin_series, excellent_threshold=50, good_threshold=30)
-    net_margin_score = score_metric(net_margin_series, excellent_threshold=15, good_threshold=10)
+        annual[yr] = {"roe_pct": roe, "roic_pct": roic, "gross_margin_pct": gm,
+                       "net_margin_pct": nm, "fcf_conversion": fcf_conv,
+                       "debt_equity": de, "revenue_B": rev_b}
 
-    # Margin trend bonus
-    gm_trend = compute_trend(gross_margin_series)
-    nm_trend = compute_trend(net_margin_series)
-    margin_trend_score = (
-        1.0 if gm_trend["direction"] == "improving" and nm_trend["direction"] == "improving"
-        else 0.5 if gm_trend["direction"] == "improving" or nm_trend["direction"] == "improving"
-        else 0.0
-    )
+    # Scoring with dynamic weight redistribution
+    dimensions = {
+        "roe_level":        {"weight": 0.25, "score": score_metric(roe_s, 20, 15)},
+        "roic_level":       {"weight": 0.20, "score": score_metric(roic_s, 15, 10)},
+        "gross_margin":     {"weight": 0.20, "score": score_metric(gm_s, 50, 30)},
+        "fcf_quality":      {"weight": 0.15, "score": score_metric(fcf_s, 1.2, 1.0)},
+        "stability":        {"weight": 0.10, "score": score_stability(roe_s)},
+        "financial_health": {"weight": 0.10, "score": score_inverse(de_s, 0.3, 2.0)},
+    }
 
-    quality_score = round(
-        (roe_level_score * 0.20
-         + roe_stability_score * 0.15
-         + roic_level_score * 0.20
-         + gross_margin_score * 0.20
-         + net_margin_score * 0.15
-         + margin_trend_score * 0.10) * 100,
-        1
-    )
+    available = {k: v for k, v in dimensions.items() if v["score"] is not None}
+    total_w = sum(v["weight"] for v in available.values()) or 1.0
+    quality_score = round(sum(v["score"] * v["weight"] / total_w for v in available.values()) * 100, 1)
 
-    # Moat rating
-    roe_above_20_count = sum(1 for v in roe_series if v is not None and v > 20)
-    if quality_score >= 75 and roe_above_20_count >= 4:
+    # Moat rating — ratio-based, not count-based
+    roe_vals = [v for v in roe_s if v is not None]
+    avg_roe = sum(roe_vals) / len(roe_vals) if roe_vals else 0
+    roe_above_20_ratio = sum(1 for v in roe_vals if v > 20) / len(roe_vals) if roe_vals else 0
+
+    if quality_score >= 75 and (avg_roe >= 20 or roe_above_20_ratio >= 0.75):
         moat_rating = "Wide Moat"
-    elif quality_score >= 50:
+    elif quality_score >= 75 and avg_roe >= 15:
+        moat_rating = "Wide Moat"
+    elif quality_score >= 55 or (avg_roe >= 15 and quality_score >= 40):
         moat_rating = "Narrow Moat"
     else:
         moat_rating = "No Moat"
+
+    # Flags
+    flags = []
+    if any(v is not None and v > 100 for v in roe_s):
+        flags.append("ROE >100% — likely distorted by share buybacks reducing equity; use ROIC for capital efficiency")
+    unavailable = [k for k, v in dimensions.items() if v["score"] is None]
+    if unavailable:
+        flags.append(f"Metrics unavailable: {', '.join(unavailable)} — weights redistributed to available dimensions")
+
+    # Revenue CAGR
+    rev_vals = [v for v in rev_s if v is not None]
+    rev_cagr = None
+    if len(rev_vals) >= 2 and rev_vals[0] and rev_vals[0] > 0:
+        try:
+            rev_cagr = round(((rev_vals[-1] / rev_vals[0]) ** (1 / (len(rev_vals) - 1)) - 1) * 100, 2)
+        except Exception:
+            pass
+
+    scoring_detail = {}
+    for k, v in dimensions.items():
+        actual_weight = round(v["weight"] / total_w * 100, 1) if v["score"] is not None else 0.0
+        scoring_detail[k] = {
+            "score": round(v["score"] * 100, 1) if v["score"] is not None else None,
+            "weight_pct": actual_weight,
+            "contribution": round(v["score"] * v["weight"] / total_w * 100, 1) if v["score"] is not None else 0.0,
+        }
 
     return {
         "ticker": ticker_sym.upper(),
@@ -233,22 +222,85 @@ def fetch_quality(ticker_sym: str) -> dict:
         "assessment_date": datetime.now().strftime("%Y-%m-%d"),
         "quality_score": quality_score,
         "moat_rating": moat_rating,
-        "metrics": annual_metrics,
+        "flags": flags,
+        "metrics": annual,
         "trends": {
-            "roe": compute_trend(roe_series),
-            "roic": compute_trend(roic_series),
-            "gross_margin": compute_trend(gross_margin_series),
-            "net_margin": compute_trend(net_margin_series),
+            "roe": compute_trend(roe_s),
+            "roic": compute_trend(roic_s),
+            "gross_margin": compute_trend(gm_s),
+            "net_margin": compute_trend(nm_s),
+            "revenue_cagr_pct": rev_cagr,
         },
-        "scoring_detail": {
-            "roe_level": round(roe_level_score * 100, 1),
-            "roe_stability": round(roe_stability_score * 100, 1),
-            "roic_level": round(roic_level_score * 100, 1),
-            "gross_margin": round(gross_margin_score * 100, 1),
-            "net_margin": round(net_margin_score * 100, 1),
-            "margin_trend": round(margin_trend_score * 100, 1),
-        },
+        "scoring_detail": scoring_detail,
     }
+
+
+def format_report(results):
+    """Format markdown report to stdout."""
+    lines = []
+    if len(results) > 1:
+        lines.append("# Business Quality Comparison")
+        lines.append(f"\n_Generated: {datetime.now().strftime('%Y-%m-%d')}_\n")
+        lines.append("| # | Ticker | Company | Score | Moat | Avg ROE | Avg ROIC | Rev CAGR | Flags |")
+        lines.append("|---|--------|---------|-------|------|---------|----------|----------|-------|")
+        for i, r in enumerate(sorted(results, key=lambda x: x.get("quality_score", 0), reverse=True), 1):
+            if "error" in r:
+                lines.append(f"| {i} | {r['ticker']} | — | ERROR | — | — | — | — | {r['error']} |")
+                continue
+            roe_vals = [v["roe_pct"] for v in r["metrics"].values() if v.get("roe_pct") is not None]
+            roic_vals = [v["roic_pct"] for v in r["metrics"].values() if v.get("roic_pct") is not None]
+            avg_roe = f"{sum(roe_vals)/len(roe_vals):.1f}%" if roe_vals else "N/A"
+            avg_roic = f"{sum(roic_vals)/len(roic_vals):.1f}%" if roic_vals else "N/A"
+            rev_cagr = f"{r['trends']['revenue_cagr_pct']:+.1f}%" if r['trends'].get('revenue_cagr_pct') is not None else "N/A"
+            flag_str = "⚠" if r.get("flags") else ""
+            lines.append(f"| {i} | **{r['ticker']}** | {r['company_name'][:30]} | {r['quality_score']} | {r['moat_rating']} | {avg_roe} | {avg_roic} | {rev_cagr} | {flag_str} |")
+        lines.append("")
+
+    for r in results:
+        if "error" in r:
+            lines.append(f"## {r['ticker']} — ERROR: {r['error']}\n")
+            continue
+
+        lines.append(f"## {r['ticker']} — {r['company_name']}")
+        lines.append(f"\n**Quality Score: {r['quality_score']}/100 — {r['moat_rating']}**\n")
+
+        if r.get("flags"):
+            for f in r["flags"]:
+                lines.append(f"⚠ _{f}_\n")
+
+        # Metrics table
+        years = sorted(r["metrics"].keys())
+        lines.append("| Year | ROE% | ROIC% | Gross Margin% | Net Margin% | FCF Conv. | D/E | Revenue ($B) |")
+        lines.append("|------|------|-------|---------------|-------------|-----------|-----|-------------|")
+        for yr in years:
+            m = r["metrics"][yr]
+            def fmt(v, suffix=""): return f"{v}{suffix}" if v is not None else "—"
+            lines.append(f"| {yr} | {fmt(m['roe_pct'])} | {fmt(m['roic_pct'])} | {fmt(m['gross_margin_pct'])} | {fmt(m['net_margin_pct'])} | {fmt(m['fcf_conversion'],'x')} | {fmt(m.get('debt_equity'))} | {fmt(m['revenue_B'])} |")
+
+        # Trends
+        t = r["trends"]
+        trend_parts = []
+        for key, label in [("roe", "ROE"), ("roic", "ROIC"), ("gross_margin", "Gross Margin"), ("net_margin", "Net Margin")]:
+            tr = t[key]
+            if tr["direction"] != "insufficient_data":
+                cagr = f" (CAGR {tr['cagr_pct']:+.1f}%)" if tr.get("cagr_pct") is not None else ""
+                trend_parts.append(f"**{label}**: {tr['direction']}{cagr}")
+        if t.get("revenue_cagr_pct") is not None:
+            trend_parts.append(f"**Revenue growth**: {t['revenue_cagr_pct']:+.1f}% CAGR")
+        lines.append("\n**Trends:** " + " | ".join(trend_parts))
+
+        # Scoring breakdown
+        lines.append("\n| Dimension | Score | Weight | Contribution |")
+        lines.append("|-----------|-------|--------|-------------|")
+        for dim, detail in r["scoring_detail"].items():
+            s = f"{detail['score']:.0f}" if detail["score"] is not None else "N/A"
+            w = f"{detail['weight_pct']:.0f}%" if detail["weight_pct"] else "—"
+            c = f"{detail['contribution']:.1f}" if detail["contribution"] else "—"
+            lines.append(f"| {dim.replace('_', ' ').title()} | {s} | {w} | {c} |")
+        lines.append(f"| **Total** | | | **{r['quality_score']}** |")
+        lines.append("")
+
+    return "\n".join(lines)
 
 
 def main():
@@ -259,10 +311,16 @@ def main():
         print(f"Fetching {sym}...", file=sys.stderr)
         result = fetch_quality(sym)
         results.append(result)
-        print(f"  → {sym}: Quality={result.get('quality_score')} | Moat={result.get('moat_rating')}", file=sys.stderr)
+        score = result.get("quality_score", "ERR")
+        moat = result.get("moat_rating", "ERR")
+        print(f"  → {sym}: Quality={score} | Moat={moat}", file=sys.stderr)
 
+    # Markdown report to stdout
+    print(format_report(results))
+
+    # JSON to stderr for programmatic use
     output = results[0] if len(results) == 1 else results
-    print(json.dumps(output, indent=2, default=str))
+    print(f"\n---JSON---\n{json.dumps(output, indent=2, default=str)}", file=sys.stderr)
 
 
 if __name__ == "__main__":

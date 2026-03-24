@@ -1,0 +1,58 @@
+{
+  "skill_name": "business-quality",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "苹果的护城河还在吗？最近感觉创新不行了，帮我看看它的business quality",
+      "expected_output": "Quality score ~85, Wide Moat. Flags ROE distortion. Identifies ecosystem switching costs as primary moat source. Addresses innovation concern.",
+      "files": [],
+      "assertions": [
+        {"name": "states_score_and_moat", "text": "Explicitly states the quality score and moat rating"},
+        {"name": "identifies_moat_source", "text": "Identifies at least one Dorsey moat source for Apple"},
+        {"name": "flags_roe_distortion", "text": "Flags ROE >100% buyback distortion"},
+        {"name": "addresses_user_concern", "text": "Addresses the innovation concern"},
+        {"name": "explains_score_drivers", "text": "Breaks down dimension-level score drivers"},
+        {"name": "business_context", "text": "Provides business context beyond numbers"}
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "帮我对比一下微软、谷歌和Meta的business quality，我想知道哪家的生意质量最好",
+      "expected_output": "Ranks all three with MSFT likely highest. Explains dimension-level differences. Identifies distinct moat sources per company.",
+      "files": [],
+      "assertions": [
+        {"name": "ranks_all_three", "text": "Clearly ranks MSFT, GOOGL, META by quality"},
+        {"name": "explains_ranking_differences", "text": "Explains WHY winner ranks highest at dimension level"},
+        {"name": "identifies_moat_sources", "text": "Identifies distinct moat sources for each company"},
+        {"name": "comparative_insight", "text": "Provides comparative insight across companies"},
+        {"name": "actionable_conclusion", "text": "Gives clear recommendation on which to research further"}
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "想买点银行股，JPM的基本面怎么样？是不是好生意？",
+      "expected_output": "Score ~46, Narrow Moat. Explains missing dimensions for banks. Provides bank-specific moat context (scale, regulatory barriers).",
+      "files": [],
+      "assertions": [
+        {"name": "states_score_and_moat", "text": "States quality score and moat rating"},
+        {"name": "explains_missing_dimensions", "text": "Explains missing dimensions and weight redistribution"},
+        {"name": "bank_specific_context", "text": "Provides bank-specific business context"},
+        {"name": "addresses_fcf_anomaly", "text": "Explains bank FCF volatility"},
+        {"name": "honest_about_limitations", "text": "Acknowledges model limitations for financial sector"}
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "英伟达质量分很高但我总觉得它是周期股，帮我分析一下到底算不算好生意",
+      "expected_output": "Score ~85, Wide Moat. Addresses cyclicality through low stability score. Identifies CUDA ecosystem moat. Warns about peak-cycle risk.",
+      "files": [],
+      "assertions": [
+        {"name": "states_score_and_moat", "text": "States quality score and moat rating"},
+        {"name": "addresses_cyclicality", "text": "Addresses cyclicality concern with stability score evidence"},
+        {"name": "identifies_moat_source", "text": "Identifies NVDA moat source (CUDA, GPU design)"},
+        {"name": "nuanced_conclusion", "text": "Provides nuanced answer about quality vs cyclicality tension"},
+        {"name": "peak_cycle_warning", "text": "Warns about peak-cycle margin distortion"}
+      ]
+    }
+  ]
+}
