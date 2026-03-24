@@ -19,17 +19,6 @@
 
 ---
 
-## Supported Markets
-
-| Market | Indices | Sector Radar | Valuation | Notes |
-|--------|---------|-------------|-----------|-------|
-| 🇺🇸 US | S&P 500, Nasdaq 100, Russell 2000 | 10 SPDR ETFs | Sector-aware multiples | Full support |
-| 🇭🇰 HK | Hang Seng, HSTECH | 6 HK ETFs | HK-discount multiples | Full support |
-| 🇨🇳 CN | — | — | A-share multiples | Ticker support (`600519.SS`) |
-| Others | — | — | US defaults | Any yfinance ticker works |
-
-To add a new market: update `lib/market.py` with tax rate, risk-free rate, and sector multiples.
-
 ## Requirements
 
 - [OpenClaw](https://openclaw.ai) — AI agent runtime
