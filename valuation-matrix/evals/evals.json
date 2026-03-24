@@ -1,0 +1,53 @@
+{
+  "skill_name": "valuation-matrix",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Build a valuation matrix for NVDA and tell me where it sits vs. fair value",
+      "expected_output": "Multi-method valuation with fair value range, method comparison, and clear verdict on whether NVDA is cheap/fair/expensive",
+      "assertions": [
+        {"name": "shows_fair_value_range", "text": "Shows a composite bear/base/bull fair value range with specific dollar amounts"},
+        {"name": "uses_dcf", "text": "Includes DCF as a valuation method with explicit growth and WACC assumptions"},
+        {"name": "compares_methods", "text": "Compares results across multiple methods and explains why they diverge"},
+        {"name": "interprets_reverse_dcf", "text": "Uses reverse DCF to assess what growth the market is pricing in and whether it's reasonable"},
+        {"name": "gives_verdict", "text": "Provides a clear valuation verdict — overvalued, fairly valued, or undervalued — with reasoning"}
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Is Microsoft overvalued or undervalued based on its fundamentals?",
+      "expected_output": "Fundamental valuation analysis with triangulated fair value and a clear overvalued/undervalued opinion",
+      "assertions": [
+        {"name": "shows_fair_value_range", "text": "Shows bear/base/bull fair value range"},
+        {"name": "multiple_methods", "text": "Uses at least 3 independent valuation methods"},
+        {"name": "explains_assumptions", "text": "Makes DCF assumptions explicit — growth rate, WACC, terminal growth — so user can judge reasonableness"},
+        {"name": "answers_question", "text": "Directly answers whether MSFT is overvalued or undervalued with supporting evidence"},
+        {"name": "recommends_next_steps", "text": "Recommends next steps (e.g., business-quality for moat assessment, risk-framework for position sizing)"}
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "腾讯 0700.HK 现在值多少钱？给我一个合理的估值区间",
+      "expected_output": "HK market valuation with HK-appropriate multiples, Chinese language analysis",
+      "assertions": [
+        {"name": "handles_hk_ticker", "text": "Successfully fetches and values the HK-listed stock with HK market multiples"},
+        {"name": "shows_fair_value_range", "text": "Provides a bear/base/bull fair value range in HKD"},
+        {"name": "uses_dcf", "text": "Includes DCF valuation with appropriate WACC for HK market"},
+        {"name": "market_expectations", "text": "Discusses what growth the market is pricing in via reverse DCF or similar analysis"},
+        {"name": "gives_verdict", "text": "Gives a clear verdict on whether Tencent is fairly valued at current price"}
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "What's the fair value for JPM? I'm considering adding it to my portfolio.",
+      "expected_output": "Bank valuation handling the fact that banks lack EBITDA/FCF, with appropriate caveats",
+      "assertions": [
+        {"name": "handles_financial_sector", "text": "Handles missing EBITDA/FCF gracefully — acknowledges that banks require different valuation approach"},
+        {"name": "shows_fair_value_range", "text": "Still provides a fair value range despite limited methods"},
+        {"name": "uses_available_methods", "text": "Uses P/E and analyst consensus (the methods that work for banks) effectively"},
+        {"name": "gives_verdict", "text": "Provides a clear verdict on whether JPM is attractively priced"},
+        {"name": "investment_context", "text": "Provides investment context relevant to the user's stated intent (adding to portfolio)"}
+      ]
+    }
+  ]
+}

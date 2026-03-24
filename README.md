@@ -14,7 +14,7 @@ A structured toolkit covering the full investment workflow — from screening ca
 | Idea Generation | [sector-radar](./sector-radar) | Sector rotation scanner — ranks 10 industry ETFs by momentum, valuation, and relative strength |
 | Deep Research | [business-quality](./business-quality) | Moat assessment — 5-year ROE/ROIC/margin trends scored into a business quality rating |
 | Deep Research | [competitor-analysis](./competitor-analysis) | Rank competitors by relative position — growth, profitability, efficiency, margin momentum, R&D |
-| Valuation | [valuation-matrix](./valuation-matrix) | Multi-method valuation — FCF Yield + EV/EBITDA + P/E (sector-aware multiples) + analyst consensus → implied price range |
+| Valuation | [valuation-matrix](./valuation-matrix) | Multi-method valuation — DCF + reverse DCF + P/E + EV/EBITDA + FCF Yield + analyst consensus → triangulated fair value range |
 | Decision Support | [risk-framework](./risk-framework) | Systematic risk scoring — beta, volatility, leverage, liquidity → overall risk rating |
 | Portfolio Management | [portfolio-monitor](./portfolio-monitor) | Portfolio analytics — correlation matrix, volatility contributions, concentration risk |
 | Portfolio Management | [catalyst-calendar](./catalyst-calendar) | 90-day catalyst calendar — earnings dates, dividend dates, key events |
