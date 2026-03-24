@@ -15,8 +15,7 @@ A structured toolkit covering the full investment workflow — from screening ca
 | Deep Research | [business-quality](./business-quality) | Moat assessment — 5-year ROE/ROIC/margin trends scored into a business quality rating |
 | Deep Research | [competitor-analysis](./competitor-analysis) | Rank competitors by relative position — growth, profitability, efficiency, margin momentum, R&D |
 | Valuation | [valuation-matrix](./valuation-matrix) | Multi-method valuation — DCF + reverse DCF + P/E + EV/EBITDA + FCF Yield + analyst consensus → triangulated fair value range |
-| Portfolio Management | [portfolio-monitor](./portfolio-monitor) | Portfolio analytics — correlation matrix, volatility contributions, concentration risk |
-| Portfolio Management | [catalyst-calendar](./catalyst-calendar) | 90-day catalyst calendar — earnings dates, dividend dates, key events |
+| Portfolio Management | [portfolio-monitor](./portfolio-monitor) | Portfolio diagnostics — sector exposure, risk decomposition, benchmark comparison, correlation, concentration |
 
 ---
 
@@ -77,9 +76,6 @@ python3 valuation-matrix/scripts/fetch_data.py AAPL
 
 # Monitor a portfolio
 python3 portfolio-monitor/scripts/fetch_data.py "AAPL:30 MSFT:20 NVDA:30 GOOGL:20"
-
-# Check upcoming catalysts
-python3 catalyst-calendar/scripts/fetch_data.py "AAPL MSFT NVDA TSLA"
 ```
 
 **Example prompts:**
