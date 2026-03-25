@@ -154,24 +154,64 @@ def fetch_valuation_data(ticker_sym):
     target_high = safe_float(info.get("targetHighPrice"))
     target_low = safe_float(info.get("targetLowPrice"))
 
-    rev_growth_est = safe_float(info.get("revenueGrowth"))
-    earn_growth_est = safe_float(info.get("earningsGrowth"))
+    rev_growth_trailing = safe_float(info.get("revenueGrowth"))  # trailing quarter YoY
+    earn_growth_trailing = safe_float(info.get("earningsGrowth"))  # trailing quarter YoY
 
-    # ── FCF from cash flow statement ─────────────────────────────────────
+    # ── Forward growth estimates (preferred for DCF) ──────────────────
+    # Priority: revenue_estimate next-year growth > EPS implied growth > trailing
+    rev_growth_forward = None
+    rev_growth_source = None
+
+    # 1. Try analyst revenue estimate (prefer next year, then current year)
+    try:
+        rev_est = t.revenue_estimate
+        if rev_est is not None and not rev_est.empty and "growth" in rev_est.columns:
+            # Prefer annual periods: +1y (next year) > 0y (current year)
+            for period in ["+1y", "0y"]:
+                if period in rev_est.index:
+                    val = safe_float(rev_est.loc[period, "growth"])
+                    if val is not None and abs(val) < 5:  # sanity: <500%
+                        rev_growth_forward = val
+                        rev_growth_source = "analyst_revenue_estimate"
+                        break
+    except Exception:
+        pass
+
+    # 2. Fallback: implied growth from forward vs trailing EPS
+    if rev_growth_forward is None and eps_fwd and eps_ttm and eps_ttm > 0:
+        implied = (eps_fwd / eps_ttm) - 1
+        if abs(implied) < 5:  # sanity check
+            rev_growth_forward = implied
+            rev_growth_source = "implied_eps_growth"
+
+    # 3. Fallback: trailing quarterly revenue growth (what revenueGrowth actually is)
+    if rev_growth_forward is None and rev_growth_trailing is not None:
+        rev_growth_forward = rev_growth_trailing
+        rev_growth_source = "trailing_quarterly"
+
+    # ── FCF from cash flow statement (multi-year average to smooth WC swings) ─
     fcf = None
+    is_financial = sector and sector in ("Financial Services", "Financial")
     try:
         cf = t.cashflow
         if cf is not None and not cf.empty:
-            col = cf.columns[0]
-            ocf, capex = None, None
-            for key in ["Operating Cash Flow", "Total Cash From Operating Activities"]:
-                if key in cf.index:
-                    ocf = safe_float(cf.loc[key, col]); break
-            for key in ["Capital Expenditure", "Capital Expenditures"]:
-                if key in cf.index:
-                    capex = safe_float(cf.loc[key, col]); break
-            if ocf is not None and capex is not None:
-                fcf = ocf + capex  # capex is negative
+            fcf_values = []
+            for col in cf.columns:
+                ocf, capex = None, None
+                for key in ["Operating Cash Flow", "Total Cash From Operating Activities"]:
+                    if key in cf.index:
+                        ocf = safe_float(cf.loc[key, col]); break
+                for key in ["Capital Expenditure", "Capital Expenditures"]:
+                    if key in cf.index:
+                        capex = safe_float(cf.loc[key, col]); break
+                if ocf is not None and capex is not None:
+                    fcf_values.append(ocf + capex)  # capex is negative
+            if fcf_values:
+                # Use average of available years (typically 4) to smooth volatility
+                fcf = sum(fcf_values) / len(fcf_values)
+            # For financials, OCF - CapEx is meaningless (dominated by loan/deposit flows)
+            if is_financial:
+                fcf = None
     except Exception:
         pass
 
@@ -209,13 +249,42 @@ def fetch_valuation_data(ticker_sym):
         pass
 
     # ── Growth rate for DCF ──────────────────────────────────────────────
-    if rev_growth_est is not None and rev_growth_est > -0.5:
-        base_growth = rev_growth_est
-    elif historical_cagr is not None:
-        base_growth = historical_cagr / 100
+    hist_growth = historical_cagr / 100 if historical_cagr is not None else None
+
+    if rev_growth_forward is not None and rev_growth_forward > -0.5:
+        base_growth = rev_growth_forward
+        growth_source = rev_growth_source
+    elif hist_growth is not None:
+        base_growth = hist_growth
+        growth_source = "historical_cagr"
     else:
         base_growth = 0.05
+        growth_source = "default"
     base_growth = max(-0.10, min(base_growth, 0.50))
+
+    # ── Auto-expand multiple ranges if stock trades outside them ─────────
+    # Hardcoded ranges can lag market cycles; use actual multiples as evidence
+    if pe_forward and pe_forward > 0:
+        pe_lo, pe_mid, pe_hi = multiples["pe"]
+        if pe_forward > pe_hi:
+            # Market pays more than our bull case — expand range upward
+            pe_hi = round(pe_forward * 1.1)
+            pe_mid = round((pe_lo + pe_hi) / 2)
+            multiples = {**multiples, "pe": (pe_lo, pe_mid, pe_hi)}
+        elif pe_forward < pe_lo:
+            pe_lo = round(pe_forward * 0.8)
+            pe_mid = round((pe_lo + pe_hi) / 2)
+            multiples = {**multiples, "pe": (pe_lo, pe_mid, pe_hi)}
+    if ev_ebitda_current and ev_ebitda_current > 0:
+        ev_lo, ev_mid, ev_hi = multiples["ev_ebitda"]
+        if ev_ebitda_current > ev_hi:
+            ev_hi = round(ev_ebitda_current * 1.1)
+            ev_mid = round((ev_lo + ev_hi) / 2)
+            multiples = {**multiples, "ev_ebitda": (ev_lo, ev_mid, ev_hi)}
+        elif ev_ebitda_current < ev_lo:
+            ev_lo = round(ev_ebitda_current * 0.8)
+            ev_mid = round((ev_lo + ev_hi) / 2)
+            multiples = {**multiples, "ev_ebitda": (ev_lo, ev_mid, ev_hi)}
 
     # ── WACC ─────────────────────────────────────────────────────────────
     debt_ratio = total_debt / (market_cap + total_debt) if market_cap and (market_cap + total_debt) > 0 else 0
@@ -343,7 +412,7 @@ def fetch_valuation_data(ticker_sym):
     if implied_growth is not None:
         reverse_dcf = {
             "implied_growth_pct": implied_growth,
-            "vs_analyst_pct": round(rev_growth_est * 100, 1) if rev_growth_est is not None else None,
+            "vs_forward_pct": round(rev_growth_forward * 100, 1) if rev_growth_forward is not None else None,
             "vs_historical_pct": historical_cagr,
         }
 
@@ -365,9 +434,11 @@ def fetch_valuation_data(ticker_sym):
             "net_debt_B": round(net_debt / 1e9, 2),
             "beta": beta,
             "wacc_pct": round(wacc * 100, 1),
-            "revenue_growth_est_pct": round(rev_growth_est * 100, 1) if rev_growth_est is not None else None,
-            "earnings_growth_est_pct": round(earn_growth_est * 100, 1) if earn_growth_est is not None else None,
+            "revenue_growth_forward_pct": round(rev_growth_forward * 100, 1) if rev_growth_forward is not None else None,
+            "revenue_growth_trailing_pct": round(rev_growth_trailing * 100, 1) if rev_growth_trailing is not None else None,
+            "earnings_growth_trailing_pct": round(earn_growth_trailing * 100, 1) if earn_growth_trailing is not None else None,
             "historical_revenue_cagr_pct": historical_cagr,
+            "growth_source": growth_source,
         },
         "methods": methods,
         "method_weights_applied": method_applied,
@@ -454,8 +525,8 @@ def format_report(results):
             rdcf = r["reverse_dcf"]
             lines.append("\n## Reverse DCF — Market Expectations\n")
             lines.append(f"**Implied FCF growth: {rdcf['implied_growth_pct']}% CAGR** over {DCF_YEARS} years\n")
-            if rdcf.get("vs_analyst_pct") is not None:
-                lines.append(f"- vs. Analyst revenue growth estimate: {rdcf['vs_analyst_pct']}%")
+            if rdcf.get("vs_forward_pct") is not None:
+                lines.append(f"- vs. Forward growth estimate: {rdcf['vs_forward_pct']}% ({r['data'].get('growth_source', '')})")
             if rdcf.get("vs_historical_pct") is not None:
                 lines.append(f"- vs. Historical revenue CAGR: {rdcf['vs_historical_pct']}%")
 
@@ -483,8 +554,10 @@ def format_report(results):
         lines.append(f"| Net Debt | {_fmt(data.get('net_debt_B'), suffix='B', prefix='$')} |")
         lines.append(f"| Beta | {_fmt(data.get('beta'))} |")
         lines.append(f"| WACC | {_fmt(data.get('wacc_pct'), suffix='%')} |")
-        lines.append(f"| Revenue Growth (analyst est.) | {_fmt(data.get('revenue_growth_est_pct'), suffix='%')} |")
+        lines.append(f"| Revenue Growth (forward est.) | {_fmt(data.get('revenue_growth_forward_pct'), suffix='%')} |")
+        lines.append(f"| Revenue Growth (trailing qtr) | {_fmt(data.get('revenue_growth_trailing_pct'), suffix='%')} |")
         lines.append(f"| Revenue CAGR (historical) | {_fmt(data.get('historical_revenue_cagr_pct'), suffix='%')} |")
+        lines.append(f"| Growth Source (DCF) | {data.get('growth_source', 'N/A')} |")
         lines.append("")
 
     return "\n".join(lines)

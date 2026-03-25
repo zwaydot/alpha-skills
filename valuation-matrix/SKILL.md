@@ -30,8 +30,8 @@ No single valuation method is reliable alone. Each captures a different dimensio
 
 A simplified but rigorous discounted cash flow model:
 
-1. **Base FCF**: Most recent annual free cash flow (OCF - CapEx)
-2. **Growth rate**: Analyst revenue growth estimate → historical CAGR fallback → 5% default
+1. **Base FCF**: Multi-year average free cash flow (OCF - CapEx, averaged over available years) to smooth working capital volatility
+2. **Growth rate**: Analyst next-year revenue growth estimate → implied EPS growth (forward/trailing) → historical CAGR → 5% default
 3. **Projection**: 5 years of FCF growth
 4. **Terminal value**: Gordon growth model (perpetuity at 2.5% terminal growth)
 5. **Discount rate**: WACC from CAPM (risk-free + β × 6% ERP, adjusted for debt)
@@ -83,10 +83,10 @@ The composite fair value is a weighted average (not median) of all available met
 ### Limitations
 
 - **DCF sensitivity**: Small changes in growth or WACC produce large changes in fair value. The bear/bull range captures this, but interpret with caution.
-- **Hardcoded sector multiples**: Multiple ranges in `lib/market.py` are estimates, not live market data. They may lag during market regime shifts.
-- **Single-year FCF base**: A company with unusually high or low FCF in the most recent year will produce skewed DCF results.
-- **Financial sector**: Banks typically lack EBITDA and FCF data — the model falls back to P/E + Analyst only.
+- **Sector multiples**: Base ranges in `lib/market.py` are starting points. The script auto-expands them when the stock's actual P/E or EV/EBITDA falls outside the range (×1.1 above, ×0.8 below), but the hardcoded center may still lag market regime shifts.
+- **Financial sector**: Banks' OCF-CapEx "FCF" is meaningless (dominated by loan/deposit flows), so DCF and FCF Yield are excluded. Valuation relies on P/E + Analyst consensus.
 - **High-growth companies**: If FCF is negative, DCF and FCF Yield are unavailable. P/E + EV/EBITDA + Analyst carry the analysis.
+- **Low FCF-to-earnings conversion**: Some businesses (e.g., KO) structurally convert less earnings to FCF due to working capital intensity. FCF-based methods will give lower valuations than earnings-based ones — this is a feature, not a bug, but interpret the divergence.
 
 ## Script Usage
 
