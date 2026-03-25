@@ -2,7 +2,7 @@
 
 > OpenClaw skills for buy-side investment decision-making.
 
-6 skills covering the full investment workflow — from screening candidates to monitoring your portfolio. Supports **US and HK markets**, with an extensible architecture for adding new markets.
+6 self-contained skills covering the full investment workflow — from screening candidates to monitoring your portfolio. Each skill can be installed independently. Supports **US and HK markets**.
 
 ---
 
@@ -47,7 +47,7 @@ python3 stock-screener/scripts/fetch_data.py --tickers AAPL MSFT NVDA --pe 40 --
 python3 stock-screener/scripts/fetch_data.py --index hstech
 
 # Scan sector momentum
-python3 sector-radar/scripts/fetch_data.py
+python3 sector-radar/scripts/fetch_data.py XLK XLF XLE XLV XLI XLY XLP XLB XLRE XLU
 
 # Assess business quality
 python3 business-quality/scripts/fetch_data.py AAPL
