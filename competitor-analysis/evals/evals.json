@@ -5,6 +5,7 @@
       "id": 1,
       "prompt": "Compare NVDA, AMD, INTC, and QCOM — which semiconductor company has the strongest competitive position right now?",
       "expected_output": "Ranked comparison with NVDA leading, competitive dynamics analysis explaining why, moat sources identified",
+      "files": [],
       "assertions": [
         {"name": "produces_ranking", "text": "Produces a clear competitive ranking of all 4 companies with scores"},
         {"name": "identifies_leader", "text": "Identifies NVDA as the clear leader and explains why (growth + margins)"},
@@ -17,6 +18,7 @@
       "id": 2,
       "prompt": "I want to invest in cloud computing. Compare AMZN, MSFT, and GOOGL — who is winning?",
       "expected_output": "Competitive comparison of big 3 cloud providers with revenue share and growth analysis",
+      "files": [],
       "assertions": [
         {"name": "produces_ranking", "text": "Produces a clear competitive ranking with scores for all 3 companies"},
         {"name": "relative_not_absolute", "text": "Scoring is relative within the peer set, not absolute quality judgment"},
@@ -29,6 +31,7 @@
       "id": 3,
       "prompt": "港股互联网公司对比：0700.HK 腾讯、9988.HK 阿里、9618.HK 京东，哪个竞争力最强？",
       "expected_output": "HK internet company comparison with Chinese language analysis, handling HK ticker format",
+      "files": [],
       "assertions": [
         {"name": "handles_hk_tickers", "text": "Successfully fetches and compares all 3 HK-listed companies"},
         {"name": "produces_ranking", "text": "Produces a competitive ranking with scores"},
@@ -41,6 +44,7 @@
       "id": 4,
       "prompt": "Compare JPM, BAC, and WFC — which US bank is most competitive?",
       "expected_output": "Bank comparison handling the fact that banks have limited R&D, with appropriate caveats",
+      "files": [],
       "assertions": [
         {"name": "produces_ranking", "text": "Produces a competitive ranking with scores for all 3 banks"},
         {"name": "handles_no_rd", "text": "Handles missing R&D data gracefully — notes that R&D dimension is less meaningful for banks"},

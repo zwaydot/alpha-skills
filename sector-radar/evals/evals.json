@@ -3,23 +3,95 @@
   "evals": [
     {
       "id": 1,
+      "name": "us-sector-rotation",
       "prompt": "帮我看看美股各板块的轮动情况，哪些板块有动量优势",
-      "expected_output": "Runs sector scan with US SPDR ETFs, uses SPY as benchmark, analyzes momentum leaders/laggards with relative strength context"
+      "expected_output": "Runs sector scan with US SPDR ETFs, uses SPY as benchmark, analyzes momentum leaders/laggards with relative strength context",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses-spdr-etfs",
+          "text": "Uses US SPDR sector ETFs (XLK, XLF, XLE, XLV, XLI, XLY, XLP, XLB, XLRE, XLU)"
+        },
+        {
+          "name": "momentum-ranking",
+          "text": "Provides ranked momentum scores with leaders and laggards identified"
+        },
+        {
+          "name": "quadrant-analysis",
+          "text": "Includes momentum × trend quality quadrant classification (strong/weak × accelerating/decelerating)"
+        },
+        {
+          "name": "chinese-response",
+          "text": "Responds in Chinese matching the user's language"
+        }
+      ]
     },
     {
       "id": 2,
+      "name": "tech-subsector-comparison",
       "prompt": "I want to compare tech sub-sectors — semiconductors vs software vs cybersecurity vs cloud. Which has the best momentum right now?",
-      "expected_output": "Uses thematic ETFs like SMH, IGV, HACK, SKYY with XLK or QQQ as benchmark, provides relative strength comparison"
+      "expected_output": "Uses thematic ETFs like SMH, IGV, HACK, SKYY with XLK or QQQ as benchmark, provides relative strength comparison",
+      "files": [],
+      "assertions": [
+        {
+          "name": "thematic-etfs",
+          "text": "Uses appropriate thematic ETFs (SMH for semis, IGV for software, HACK for cyber, SKYY for cloud)"
+        },
+        {
+          "name": "relative-strength",
+          "text": "Compares relative strength across sub-sectors with clear winner identified"
+        },
+        {
+          "name": "acceleration-context",
+          "text": "Discusses momentum acceleration or deceleration to assess trend sustainability"
+        }
+      ]
     },
     {
       "id": 3,
+      "name": "global-market-comparison",
       "prompt": "Compare US, Japan, Germany, and China equity markets. Where should I be overweight?",
-      "expected_output": "Uses country ETFs (SPY, EWJ, EWG, FXI or similar) with appropriate benchmark, discusses geographic rotation"
+      "expected_output": "Uses country ETFs (SPY, EWJ, EWG, FXI or similar) with appropriate benchmark, discusses geographic rotation",
+      "files": [],
+      "assertions": [
+        {
+          "name": "country-etfs",
+          "text": "Uses country-level ETFs (e.g. SPY, EWJ, EWG, FXI/MCHI) for each market"
+        },
+        {
+          "name": "overweight-recommendation",
+          "text": "Provides clear overweight/underweight recommendation with momentum-based rationale"
+        },
+        {
+          "name": "macro-context",
+          "text": "Discusses macro or catalyst context behind regional momentum differences"
+        }
+      ]
     },
     {
       "id": 4,
+      "name": "hk-sector-scan",
       "prompt": "港股各板块现在怎么样？科技、金融、地产、消费哪个强",
-      "expected_output": "Uses HK sector ETFs (3067.HK, 3033.HK, 3012.HK, 3040.HK) with 2800.HK benchmark, Chinese response"
+      "expected_output": "Uses HK sector ETFs (3067.HK, 3033.HK, 3012.HK, 3040.HK) with 2800.HK benchmark, Chinese response",
+      "files": [],
+      "assertions": [
+        {
+          "name": "hk-etfs",
+          "text": "Uses HK sector ETFs (3067.HK for tech, 3033.HK for financials, 3012.HK for property, 3040.HK for consumer)"
+        },
+        {
+          "name": "hk-benchmark",
+          "text": "Uses 2800.HK (Tracker Fund) as benchmark for relative strength"
+        },
+        {
+          "name": "sector-verdict",
+          "text": "Clearly identifies which HK sector has strongest/weakest momentum"
+        },
+        {
+          "name": "chinese-response",
+          "text": "Responds in Chinese matching the user's language"
+        }
+      ]
     }
   ]
 }

@@ -60,7 +60,7 @@ This answers whether the market's expectations are reasonable. If implied growth
 
 ### Relative Methods: Sector-Aware Multiples
 
-P/E, EV/EBITDA, and FCF Yield use sector-specific (bear, base, bull) multiple ranges from `lib/market.py`. This accounts for the fact that Technology trades at structurally higher multiples than Energy, and HK trades at a structural discount to US.
+P/E, EV/EBITDA, and FCF Yield use sector-specific (bear, base, bull) multiple ranges defined in the script. This accounts for the fact that Technology trades at structurally higher multiples than Energy, and HK trades at a structural discount to US.
 
 - **P/E**: Uses forward EPS when available (stocks are priced on future earnings), trailing as fallback
 - **EV/EBITDA**: Capital-structure neutral — the best single multiple for cross-sector comparison (Damodaran)
@@ -83,7 +83,7 @@ The composite fair value is a weighted average (not median) of all available met
 ### Limitations
 
 - **DCF sensitivity**: Small changes in growth or WACC produce large changes in fair value. The bear/bull range captures this, but interpret with caution.
-- **Sector multiples**: Base ranges in `lib/market.py` are starting points. The script auto-expands them when the stock's actual P/E or EV/EBITDA falls outside the range (×1.1 above, ×0.8 below), but the hardcoded center may still lag market regime shifts.
+- **Sector multiples**: Base ranges in the script are starting points. The script auto-expands them when the stock's actual P/E or EV/EBITDA falls outside the range (×1.1 above, ×0.8 below), but the hardcoded center may still lag market regime shifts.
 - **Financial sector**: Banks' OCF-CapEx "FCF" is meaningless (dominated by loan/deposit flows), so DCF and FCF Yield are excluded. Valuation relies on P/E + Analyst consensus.
 - **High-growth companies**: If FCF is negative, DCF and FCF Yield are unavailable. P/E + EV/EBITDA + Analyst carry the analysis.
 - **Low FCF-to-earnings conversion**: Some businesses (e.g., KO) structurally convert less earnings to FCF due to working capital intensity. FCF-based methods will give lower valuations than earnings-based ones — this is a feature, not a bug, but interpret the divergence.

@@ -5,48 +5,52 @@
       "id": 1,
       "prompt": "Analyze my portfolio: AAPL:30 MSFT:20 NVDA:50 — is my risk well-balanced?",
       "expected_output": "Identifies NVDA as risk-dominant position (~66% vol contribution for 50% weight), flags 100% tech concentration, compares to SPY benchmark, and suggests diversification improvements",
+      "files": [],
       "assertions": [
-        {"name": "identifies_risk_dominant_position", "description": "Points out NVDA contributes disproportionate risk relative to its weight"},
-        {"name": "explains_correlation_impact", "description": "Discusses how correlations between holdings affect portfolio risk"},
-        {"name": "benchmark_comparison", "description": "Compares portfolio metrics (return, vol, Sharpe, drawdown) against SPY"},
-        {"name": "flags_sector_concentration", "description": "Notes 100% Technology sector exposure as a risk"},
-        {"name": "recommends_next_steps", "description": "Suggests specific actions — diversify into other sectors, trim risk-dominant position, or use other skills for deeper analysis"}
+        {"name": "identifies_risk_dominant_position", "text": "Points out NVDA contributes disproportionate risk relative to its weight"},
+        {"name": "explains_correlation_impact", "text": "Discusses how correlations between holdings affect portfolio risk"},
+        {"name": "benchmark_comparison", "text": "Compares portfolio metrics (return, vol, Sharpe, drawdown) against SPY"},
+        {"name": "flags_sector_concentration", "text": "Notes 100% Technology sector exposure as a risk"},
+        {"name": "recommends_next_steps", "text": "Suggests specific actions — diversify into other sectors, trim risk-dominant position, or use other skills for deeper analysis"}
       ]
     },
     {
       "id": 2,
       "prompt": "I'm building a diversified portfolio: AAPL:25 MSFT:25 JPM:25 XOM:25 — how well-diversified is it really?",
       "expected_output": "Acknowledges multi-sector exposure (Tech 50%, Financials 25%, Energy 25%), highlights low MSFT-XOM correlation as genuine diversification, notes risk contributions are more balanced than the concentrated portfolio",
+      "files": [],
       "assertions": [
-        {"name": "sector_exposure_analysis", "description": "Breaks down sector weights and comments on diversification quality"},
-        {"name": "correlation_interpretation", "description": "Interprets specific correlation pairs — highlights low correlations as diversification benefit"},
-        {"name": "risk_balance_assessment", "description": "Evaluates whether risk contributions are proportional to weights"},
-        {"name": "benchmark_relative_performance", "description": "Compares Sharpe ratio and drawdown against SPY"},
-        {"name": "honest_assessment", "description": "Notes that while more diversified than a pure tech portfolio, 4 stocks and 50% tech still has concentration risk"}
+        {"name": "sector_exposure_analysis", "text": "Breaks down sector weights and comments on diversification quality"},
+        {"name": "correlation_interpretation", "text": "Interprets specific correlation pairs — highlights low correlations as diversification benefit"},
+        {"name": "risk_balance_assessment", "text": "Evaluates whether risk contributions are proportional to weights"},
+        {"name": "benchmark_relative_performance", "text": "Compares Sharpe ratio and drawdown against SPY"},
+        {"name": "honest_assessment", "text": "Notes that while more diversified than a pure tech portfolio, 4 stocks and 50% tech still has concentration risk"}
       ]
     },
     {
       "id": 3,
       "prompt": "Check my HK portfolio: 0700.HK:40 9988.HK:30 1810.HK:30 — how is it doing vs the Hang Seng?",
       "expected_output": "Compares against 2800.HK benchmark, discusses HK market context, flags high Tencent-Alibaba correlation, notes underperformance vs benchmark",
+      "files": [],
       "assertions": [
-        {"name": "uses_hk_benchmark", "description": "Compares against 2800.HK (Hang Seng Tracker) not SPY"},
-        {"name": "discusses_underperformance", "description": "Notes portfolio underperformance vs benchmark and explains why (concentration in specific names vs broad index)"},
-        {"name": "high_correlation_warning", "description": "Flags the high 0700.HK-9988.HK correlation as reducing diversification benefit"},
-        {"name": "drawdown_context", "description": "Contextualizes max drawdown in absolute terms and relative to benchmark"},
-        {"name": "actionable_for_hk_investor", "description": "Provides HK-market-relevant suggestions, not generic US-centric advice"}
+        {"name": "uses_hk_benchmark", "text": "Compares against 2800.HK (Hang Seng Tracker) not SPY"},
+        {"name": "discusses_underperformance", "text": "Notes portfolio underperformance vs benchmark and explains why (concentration in specific names vs broad index)"},
+        {"name": "high_correlation_warning", "text": "Flags the high 0700.HK-9988.HK correlation as reducing diversification benefit"},
+        {"name": "drawdown_context", "text": "Contextualizes max drawdown in absolute terms and relative to benchmark"},
+        {"name": "actionable_for_hk_investor", "text": "Provides HK-market-relevant suggestions, not generic US-centric advice"}
       ]
     },
     {
       "id": 4,
       "prompt": "Analyze my portfolio: AAPL:10 MSFT:10 GOOGL:10 AMZN:10 META:10 JPM:10 V:10 UNH:10 XOM:10 PG:10 — is this well-balanced?",
       "expected_output": "Recognizes 10-stock equal-weight portfolio across multiple sectors, evaluates sector diversification, notes which correlations provide real diversification benefit, compares to SPY",
+      "files": [],
       "assertions": [
-        {"name": "recognizes_equal_weight", "description": "Notes the equal-weight structure and its implications for rebalancing"},
-        {"name": "multi_sector_assessment", "description": "Evaluates the sector distribution across tech, financials, healthcare, energy, consumer staples"},
-        {"name": "identifies_diversification_benefit", "description": "Points to specific low-correlation pairs that provide genuine risk reduction"},
-        {"name": "portfolio_vs_index", "description": "Compares portfolio construction to the benchmark — is this a closet indexer or meaningfully different?"},
-        {"name": "risk_decomposition_insight", "description": "Identifies which holdings contribute most/least to portfolio risk despite equal weights"}
+        {"name": "recognizes_equal_weight", "text": "Notes the equal-weight structure and its implications for rebalancing"},
+        {"name": "multi_sector_assessment", "text": "Evaluates the sector distribution across tech, financials, healthcare, energy, consumer staples"},
+        {"name": "identifies_diversification_benefit", "text": "Points to specific low-correlation pairs that provide genuine risk reduction"},
+        {"name": "portfolio_vs_index", "text": "Compares portfolio construction to the benchmark — is this a closet indexer or meaningfully different?"},
+        {"name": "risk_decomposition_insight", "text": "Identifies which holdings contribute most/least to portfolio risk despite equal weights"}
       ]
     }
   ]

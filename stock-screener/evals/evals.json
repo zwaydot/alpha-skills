@@ -8,11 +8,11 @@
       "expected_output": "Uses server-side screening via yf.screen(), applies Technology sector + PE/ROE filters with balanced style, returns ranked list with 5-factor scores and industry breakdown",
       "files": [],
       "assertions": [
-        {"name": "server_side_screening", "description": "Uses server-side API, not scanning 500+ tickers individually"},
-        {"name": "sector_filter_applied", "description": "Technology sector filter applied correctly"},
-        {"name": "multiple_results", "description": "Returns multiple stocks (not just 1-2)"},
-        {"name": "five_factor_scoring", "description": "Output shows 5-factor scoring with valuation, profitability, growth, momentum, safety"},
-        {"name": "score_differentiation", "description": "Clear score ranking with meaningful spread"}
+        {"name": "server_side_screening", "text": "Uses server-side API, not scanning 500+ tickers individually"},
+        {"name": "sector_filter_applied", "text": "Technology sector filter applied correctly"},
+        {"name": "multiple_results", "text": "Returns multiple stocks (not just 1-2)"},
+        {"name": "five_factor_scoring", "text": "Output shows 5-factor scoring with valuation, profitability, growth, momentum, safety"},
+        {"name": "score_differentiation", "text": "Clear score ranking with meaningful spread"}
       ]
     },
     {
@@ -22,11 +22,11 @@
       "expected_output": "Uses --index hstech with quality or balanced style, screens 27 HK tickers, returns quality-ranked list with .HK format",
       "files": [],
       "assertions": [
-        {"name": "hstech_index_used", "description": "Used --index hstech, loaded 27 tickers"},
-        {"name": "hk_tickers_present", "description": "All results use .HK ticker format"},
-        {"name": "style_appropriate", "description": "Uses quality or balanced style given user emphasis on profitability + valuation"},
-        {"name": "score_differentiation", "description": "Clear score ranking"},
-        {"name": "csv_output_exists", "description": "CSV output file produced"}
+        {"name": "hstech_index_used", "text": "Used --index hstech, loaded 27 tickers"},
+        {"name": "hk_tickers_present", "text": "All results use .HK ticker format"},
+        {"name": "style_appropriate", "text": "Uses quality or balanced style given user emphasis on profitability + valuation"},
+        {"name": "score_differentiation", "text": "Clear score ranking"},
+        {"name": "csv_output_exists", "text": "CSV output file produced"}
       ]
     },
     {
@@ -36,11 +36,11 @@
       "expected_output": "Screens all 8 tickers with --pe 40 --roe 10 and value style (user says 'good value'), TSLA filtered out, remaining stocks ranked by 5-factor score",
       "files": [],
       "assertions": [
-        {"name": "all_tickers_screened", "description": "All 8 tickers were screened"},
-        {"name": "value_style_used", "description": "Uses value style preset since user explicitly asks about value"},
-        {"name": "tsla_filtered_out", "description": "TSLA excluded by filters"},
-        {"name": "five_factor_output", "description": "Output includes PE, EV/EBITDA, ROE, growth, momentum, D/E columns"},
-        {"name": "score_differentiation", "description": "Clear score ranking with meaningful spread"}
+        {"name": "all_tickers_screened", "text": "All 8 tickers were screened"},
+        {"name": "value_style_used", "text": "Uses value style preset since user explicitly asks about value"},
+        {"name": "tsla_filtered_out", "text": "TSLA excluded by filters"},
+        {"name": "five_factor_output", "text": "Output includes PE, EV/EBITDA, ROE, growth, momentum, D/E columns"},
+        {"name": "score_differentiation", "text": "Clear score ranking with meaningful spread"}
       ]
     },
     {
@@ -50,11 +50,11 @@
       "expected_output": "Uses --sector Technology --pe 50 --roe 10 --style growth, returns stocks ranked with growth-weighted scoring emphasizing revenue/earnings growth and momentum",
       "files": [],
       "assertions": [
-        {"name": "growth_style_used", "description": "Uses growth style preset for growth-focused request"},
-        {"name": "relaxed_pe_filter", "description": "PE threshold set to 50 as user specified"},
-        {"name": "growth_weighted_scoring", "description": "Scoring weights show Growth(40%) + Momentum(25%) emphasis"},
-        {"name": "multiple_results", "description": "Returns multiple stocks"},
-        {"name": "score_differentiation", "description": "Clear score ranking"}
+        {"name": "growth_style_used", "text": "Uses growth style preset for growth-focused request"},
+        {"name": "relaxed_pe_filter", "text": "PE threshold set to 50 as user specified"},
+        {"name": "growth_weighted_scoring", "text": "Scoring weights show Growth(40%) + Momentum(25%) emphasis"},
+        {"name": "multiple_results", "text": "Returns multiple stocks"},
+        {"name": "score_differentiation", "text": "Clear score ranking"}
       ]
     }
   ]

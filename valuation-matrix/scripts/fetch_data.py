@@ -15,16 +15,103 @@ Usage:
     python3 scripts/fetch_data.py NVDA MSFT GOOGL
 """
 
-import sys, os, json
+import sys, json
 from datetime import datetime
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'lib'))
-try:
-    from market import detect_market, get_market_config, get_sector_multiples as _get_mkt_multiples
-except ImportError:
-    def detect_market(ticker): return "US"
-    def get_market_config(market): return {"tax_rate": 0.21, "risk_free_rate": 0.045}
-    _get_mkt_multiples = None
+
+# ── Market configuration ────────────────────────────────────────────────────
+
+def detect_market(ticker: str) -> str:
+    """Detect market from ticker suffix."""
+    t = ticker.upper().strip()
+    if t.endswith(".HK"): return "HK"
+    if t.endswith(".SS") or t.endswith(".SZ"): return "CN"
+    if t.endswith(".T"): return "JP"
+    if t.endswith(".L"): return "UK"
+    if t.endswith(".DE"): return "DE"
+    if t.endswith(".PA"): return "FR"
+    if t.endswith(".AS"): return "NL"
+    return "US"
+
+
+MARKET_CONFIGS = {
+    "US": {"tax_rate": 0.21, "risk_free_rate": 0.045, "currency": "USD", "label": "United States"},
+    "HK": {"tax_rate": 0.165, "risk_free_rate": 0.04, "currency": "HKD", "label": "Hong Kong"},
+    "CN": {"tax_rate": 0.25, "risk_free_rate": 0.02, "currency": "CNY", "label": "China A-share"},
+    "JP": {"tax_rate": 0.30, "risk_free_rate": 0.01, "currency": "JPY", "label": "Japan"},
+    "UK": {"tax_rate": 0.25, "risk_free_rate": 0.04, "currency": "GBP", "label": "United Kingdom"},
+    "DE": {"tax_rate": 0.30, "risk_free_rate": 0.03, "currency": "EUR", "label": "Germany"},
+    "FR": {"tax_rate": 0.25, "risk_free_rate": 0.03, "currency": "EUR", "label": "France"},
+    "NL": {"tax_rate": 0.26, "risk_free_rate": 0.03, "currency": "EUR", "label": "Netherlands"},
+}
+_DEFAULT_CONFIG = {"tax_rate": 0.21, "risk_free_rate": 0.04, "currency": "USD", "label": "Unknown"}
+
+
+def get_market_config(market: str) -> dict:
+    return MARKET_CONFIGS.get(market, _DEFAULT_CONFIG)
+
+
+# ── Sector-aware valuation multiples ────────────────────────────────────────
+# Format: (bear, base, bull) for pe, ev_ebitda; (bull_yield, base_yield, bear_yield) for fcf_yield
+
+_US_MULTIPLES = {
+    "Technology":              {"pe": (20, 30, 40), "ev_ebitda": (15, 22, 30), "fcf_yield": (0.02, 0.03, 0.04)},
+    "Communication Services":  {"pe": (15, 22, 30), "ev_ebitda": (10, 16, 22), "fcf_yield": (0.03, 0.04, 0.05)},
+    "Consumer Cyclical":       {"pe": (12, 18, 25), "ev_ebitda": (8, 13, 18),  "fcf_yield": (0.04, 0.05, 0.06)},
+    "Consumer Defensive":      {"pe": (15, 20, 25), "ev_ebitda": (10, 14, 18), "fcf_yield": (0.04, 0.05, 0.06)},
+    "Healthcare":              {"pe": (15, 22, 30), "ev_ebitda": (10, 16, 22), "fcf_yield": (0.03, 0.04, 0.05)},
+    "Financial Services":      {"pe": (8, 12, 16),  "ev_ebitda": (6, 9, 12),   "fcf_yield": (0.06, 0.08, 0.10)},
+    "Industrials":             {"pe": (12, 18, 24), "ev_ebitda": (8, 12, 16),  "fcf_yield": (0.04, 0.05, 0.07)},
+    "Energy":                  {"pe": (6, 10, 14),  "ev_ebitda": (4, 6, 9),    "fcf_yield": (0.06, 0.08, 0.12)},
+    "Basic Materials":         {"pe": (8, 13, 18),  "ev_ebitda": (5, 8, 12),   "fcf_yield": (0.05, 0.07, 0.09)},
+    "Real Estate":             {"pe": (15, 25, 35), "ev_ebitda": (12, 18, 25), "fcf_yield": (0.04, 0.05, 0.06)},
+    "Utilities":               {"pe": (12, 17, 22), "ev_ebitda": (8, 11, 14),  "fcf_yield": (0.05, 0.06, 0.08)},
+    "_DEFAULT":                {"pe": (15, 20, 25), "ev_ebitda": (10, 14, 18), "fcf_yield": (0.04, 0.05, 0.06)},
+}
+
+# HK trades at a structural discount to US (lower liquidity, geopolitical risk)
+_HK_MULTIPLES = {
+    "Technology":              {"pe": (12, 20, 28), "ev_ebitda": (8, 14, 20),  "fcf_yield": (0.03, 0.05, 0.07)},
+    "Communication Services":  {"pe": (10, 16, 22), "ev_ebitda": (6, 10, 15),  "fcf_yield": (0.04, 0.06, 0.08)},
+    "Consumer Cyclical":       {"pe": (8, 14, 20),  "ev_ebitda": (5, 9, 14),   "fcf_yield": (0.05, 0.07, 0.09)},
+    "Consumer Defensive":      {"pe": (10, 16, 22), "ev_ebitda": (7, 11, 15),  "fcf_yield": (0.05, 0.06, 0.08)},
+    "Healthcare":              {"pe": (12, 18, 25), "ev_ebitda": (8, 13, 18),  "fcf_yield": (0.04, 0.05, 0.07)},
+    "Financial Services":      {"pe": (4, 7, 10),   "ev_ebitda": (4, 6, 9),    "fcf_yield": (0.08, 0.10, 0.14)},
+    "Industrials":             {"pe": (6, 10, 15),  "ev_ebitda": (4, 7, 11),   "fcf_yield": (0.06, 0.08, 0.10)},
+    "Energy":                  {"pe": (4, 7, 10),   "ev_ebitda": (3, 5, 7),    "fcf_yield": (0.08, 0.10, 0.14)},
+    "Basic Materials":         {"pe": (5, 8, 12),   "ev_ebitda": (3, 6, 9),    "fcf_yield": (0.07, 0.09, 0.12)},
+    "Real Estate":             {"pe": (5, 10, 16),  "ev_ebitda": (8, 14, 20),  "fcf_yield": (0.05, 0.07, 0.09)},
+    "Utilities":               {"pe": (8, 12, 16),  "ev_ebitda": (6, 9, 12),   "fcf_yield": (0.06, 0.07, 0.09)},
+    "_DEFAULT":                {"pe": (8, 14, 20),  "ev_ebitda": (6, 10, 15),  "fcf_yield": (0.05, 0.07, 0.09)},
+}
+
+# CN (A-share) — higher P/E for consumer/healthcare (scarcity premium), lower for SOE-heavy sectors
+_CN_MULTIPLES = {
+    "Technology":              {"pe": (15, 25, 35), "ev_ebitda": (10, 18, 25), "fcf_yield": (0.02, 0.04, 0.06)},
+    "Consumer Cyclical":       {"pe": (15, 25, 35), "ev_ebitda": (10, 16, 22), "fcf_yield": (0.03, 0.04, 0.06)},
+    "Consumer Defensive":      {"pe": (20, 30, 40), "ev_ebitda": (12, 18, 25), "fcf_yield": (0.02, 0.03, 0.05)},
+    "Healthcare":              {"pe": (18, 28, 38), "ev_ebitda": (12, 20, 28), "fcf_yield": (0.02, 0.04, 0.06)},
+    "Financial Services":      {"pe": (4, 6, 9),    "ev_ebitda": (3, 5, 8),    "fcf_yield": (0.08, 0.12, 0.16)},
+    "Energy":                  {"pe": (5, 8, 12),   "ev_ebitda": (3, 5, 8),    "fcf_yield": (0.08, 0.10, 0.14)},
+    "Industrials":             {"pe": (8, 14, 20),  "ev_ebitda": (5, 9, 14),   "fcf_yield": (0.05, 0.07, 0.09)},
+    "Real Estate":             {"pe": (5, 8, 12),   "ev_ebitda": (4, 7, 10),   "fcf_yield": (0.06, 0.09, 0.12)},
+    "Utilities":               {"pe": (10, 14, 18), "ev_ebitda": (6, 9, 12),   "fcf_yield": (0.05, 0.07, 0.09)},
+    "_DEFAULT":                {"pe": (10, 18, 25), "ev_ebitda": (8, 12, 18),  "fcf_yield": (0.04, 0.06, 0.08)},
+}
+
+_MARKET_SECTOR_MULTIPLES = {
+    "US": _US_MULTIPLES,
+    "HK": _HK_MULTIPLES,
+    "CN": _CN_MULTIPLES,
+}
+
+
+def get_sector_multiples(market: str, sector: str | None) -> dict:
+    """Return (bear, base, bull) multiple ranges for a market+sector pair."""
+    market_map = _MARKET_SECTOR_MULTIPLES.get(market, _US_MULTIPLES)
+    if sector and sector in market_map:
+        return market_map[sector]
+    return market_map.get("_DEFAULT", _US_MULTIPLES["_DEFAULT"])
 
 try:
     import yfinance as yf
@@ -127,10 +214,7 @@ def fetch_valuation_data(ticker_sym):
     risk_free = mkt_cfg["risk_free_rate"]
     tax_rate = mkt_cfg["tax_rate"]
 
-    if _get_mkt_multiples:
-        multiples = _get_mkt_multiples(market, sector)
-    else:
-        multiples = {"pe": (15, 20, 25), "ev_ebitda": (10, 14, 18), "fcf_yield": (0.04, 0.05, 0.06)}
+    multiples = get_sector_multiples(market, sector)
 
     # ── Basic data ───────────────────────────────────────────────────────
     price = safe_float(info.get("currentPrice") or info.get("regularMarketPrice"))

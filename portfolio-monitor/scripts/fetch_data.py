@@ -9,16 +9,39 @@ Usage:
     python3 scripts/fetch_data.py "0700.HK:40 9988.HK:30 1810.HK:30"
 """
 
-import sys, os, json
+import sys, json
 from datetime import datetime, timedelta
+from collections import Counter
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'lib'))
-try:
-    from market import detect_market, detect_portfolio_market, get_risk_free_rate
-except ImportError:
-    def detect_market(ticker): return "US"
-    def detect_portfolio_market(tickers): return "US"
-    def get_risk_free_rate(market): return 0.045
+
+def detect_market(ticker: str) -> str:
+    """Detect market from ticker suffix."""
+    t = ticker.upper().strip()
+    if t.endswith(".HK"): return "HK"
+    if t.endswith(".SS") or t.endswith(".SZ"): return "CN"
+    if t.endswith(".T"): return "JP"
+    if t.endswith(".L"): return "UK"
+    if t.endswith(".DE"): return "DE"
+    if t.endswith(".PA"): return "FR"
+    if t.endswith(".AS"): return "NL"
+    return "US"
+
+
+def detect_portfolio_market(tickers: list[str]) -> str:
+    """Detect primary market from a list of tickers (majority rule)."""
+    if not tickers:
+        return "US"
+    return Counter([detect_market(t) for t in tickers]).most_common(1)[0][0]
+
+
+_RISK_FREE_RATES = {
+    "US": 0.045, "HK": 0.04, "CN": 0.02, "JP": 0.01,
+    "UK": 0.04, "DE": 0.03, "FR": 0.03, "NL": 0.03,
+}
+
+
+def get_risk_free_rate(market: str) -> float:
+    return _RISK_FREE_RATES.get(market, 0.04)
 
 try:
     import yfinance as yf

@@ -5,6 +5,7 @@
       "id": 1,
       "prompt": "Build a valuation matrix for NVDA and tell me where it sits vs. fair value",
       "expected_output": "Multi-method valuation with fair value range, method comparison, and clear verdict on whether NVDA is cheap/fair/expensive",
+      "files": [],
       "assertions": [
         {"name": "shows_fair_value_range", "text": "Shows a composite bear/base/bull fair value range with specific dollar amounts"},
         {"name": "uses_dcf", "text": "Includes DCF as a valuation method with explicit growth and WACC assumptions"},
@@ -17,6 +18,7 @@
       "id": 2,
       "prompt": "Is Microsoft overvalued or undervalued based on its fundamentals?",
       "expected_output": "Fundamental valuation analysis with triangulated fair value and a clear overvalued/undervalued opinion",
+      "files": [],
       "assertions": [
         {"name": "shows_fair_value_range", "text": "Shows bear/base/bull fair value range"},
         {"name": "multiple_methods", "text": "Uses at least 3 independent valuation methods"},
@@ -29,6 +31,7 @@
       "id": 3,
       "prompt": "腾讯 0700.HK 现在值多少钱？给我一个合理的估值区间",
       "expected_output": "HK market valuation with HK-appropriate multiples, Chinese language analysis",
+      "files": [],
       "assertions": [
         {"name": "handles_hk_ticker", "text": "Successfully fetches and values the HK-listed stock with HK market multiples"},
         {"name": "shows_fair_value_range", "text": "Provides a bear/base/bull fair value range in HKD"},
@@ -41,6 +44,7 @@
       "id": 4,
       "prompt": "What's the fair value for JPM? I'm considering adding it to my portfolio.",
       "expected_output": "Bank valuation handling the fact that banks lack EBITDA/FCF, with appropriate caveats",
+      "files": [],
       "assertions": [
         {"name": "handles_financial_sector", "text": "Handles missing EBITDA/FCF gracefully — acknowledges that banks require different valuation approach"},
         {"name": "shows_fair_value_range", "text": "Still provides a fair value range despite limited methods"},

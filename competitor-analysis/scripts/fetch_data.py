@@ -7,15 +7,31 @@ Usage:
     python3 scripts/fetch_data.py MSFT GOOGL META
 """
 
-import sys, os, json
+import sys, json
 from datetime import datetime
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'lib'))
-try:
-    from market import detect_market, get_tax_rate
-except ImportError:
-    def detect_market(ticker): return "US"
-    def get_tax_rate(market): return 0.21
+
+def detect_market(ticker: str) -> str:
+    """Detect market from ticker suffix."""
+    t = ticker.upper().strip()
+    if t.endswith(".HK"): return "HK"
+    if t.endswith(".SS") or t.endswith(".SZ"): return "CN"
+    if t.endswith(".T"): return "JP"
+    if t.endswith(".L"): return "UK"
+    if t.endswith(".DE"): return "DE"
+    if t.endswith(".PA"): return "FR"
+    if t.endswith(".AS"): return "NL"
+    return "US"
+
+
+_TAX_RATES = {
+    "US": 0.21, "HK": 0.165, "CN": 0.25, "JP": 0.30,
+    "UK": 0.25, "DE": 0.30, "FR": 0.25, "NL": 0.26,
+}
+
+
+def get_tax_rate(market: str) -> float:
+    return _TAX_RATES.get(market, 0.21)
 
 try:
     import yfinance as yf

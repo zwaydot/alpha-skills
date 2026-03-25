@@ -9,7 +9,7 @@ Match the user's intent to the right skill. **Read the target skill's `SKILL.md`
 | Intent | Skill | Script Example |
 |--------|-------|----------------|
 | Screen/filter stocks, find candidates, rank by metrics | `stock-screener` | `python3 stock-screener/scripts/fetch_data.py --sector Technology --pe 25` |
-| Compare sectors, ETFs, sector rotation, fund allocation | `sector-radar` | `python3 sector-radar/scripts/fetch_data.py` |
+| Compare sectors, ETFs, sector rotation, fund allocation | `sector-radar` | `python3 sector-radar/scripts/fetch_data.py XLK XLF XLE XLV XLI XLY XLP XLB XLRE XLU` |
 | Assess business quality, moat, profitability durability | `business-quality` | `python3 business-quality/scripts/fetch_data.py AAPL` |
 | Compare competitors within an industry | `competitor-analysis` | `python3 competitor-analysis/scripts/fetch_data.py "AAPL MSFT GOOGL"` |
 | Fair value, DCF, overvalued/undervalued, price targets | `valuation-matrix` | `python3 valuation-matrix/scripts/fetch_data.py AAPL` |
@@ -45,7 +45,3 @@ python3 <skill>/scripts/fetch_data.py [args]
 ```
 
 Scripts output a Markdown report to stdout and JSON data to stderr. After running, follow the "After Running the Script" section in the skill's `SKILL.md` to synthesize the data into analysis.
-
-## Shared Code
-
-`lib/market.py` contains sector-specific multiple ranges and market configuration shared across skills.
