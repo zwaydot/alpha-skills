@@ -2,7 +2,7 @@
 
 > OpenClaw skills for buy-side investment decision-making.
 
-6 self-contained skills covering the full investment workflow — from screening candidates to monitoring your portfolio. Each skill can be installed independently. Supports **US and HK markets**.
+6 self-contained skills covering the full investment workflow — from screening candidates to monitoring your portfolio. Each skill can be installed independently. 
 
 ---
 
